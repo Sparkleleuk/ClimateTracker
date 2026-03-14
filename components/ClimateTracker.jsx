@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { analyzeCandidate as fetchAnalysis } from "../services/climateApi";
+import ReactMarkdown from "react-markdown";
 
 const CANDIDATES = [
   // === SENATE - COMPETITIVE RACES ===
@@ -164,6 +166,76 @@ const COMPETITIVENESS_COLOR = {
 
 const FOSSIL_ICON = { high: "🛢️🛢️🛢️", moderate: "🛢️🛢️", low: "🛢️", unknown: "❓" };
 
+const ISSUE_FILTERS = [
+  {
+    category: "Energy & Climate",
+    issues: [
+      { value: "clean-energy",   label: "Clean energy transition" },
+      { value: "fossil-fuel",    label: "Fossil fuel policy" },
+      { value: "carbon-pricing", label: "Carbon pricing" },
+      { value: "nuclear",        label: "Nuclear energy" },
+      { value: "grid",           label: "Energy grid modernization" },
+      { value: "buildings",      label: "Building decarbonization" },
+    ],
+  },
+  {
+    category: "Transportation",
+    issues: [
+      { value: "ev",      label: "Electric vehicles" },
+      { value: "transit", label: "Public transit" },
+      { value: "aviation",label: "Aviation & shipping" },
+    ],
+  },
+  {
+    category: "Land, Water & Ecosystems",
+    issues: [
+      { value: "public-lands",  label: "Public lands" },
+      { value: "water",         label: "Water rights & quality" },
+      { value: "forests",       label: "Deforestation & reforestation" },
+      { value: "biodiversity",  label: "Biodiversity & endangered species" },
+      { value: "agriculture",   label: "Agriculture & soil" },
+      { value: "ocean",         label: "Ocean policy" },
+    ],
+  },
+  {
+    category: "Pollution & Public Health",
+    issues: [
+      { value: "air-quality", label: "Air quality" },
+      { value: "chemicals",   label: "Chemical regulation" },
+      { value: "plastics",    label: "Plastic pollution" },
+      { value: "env-justice", label: "Environmental justice" },
+    ],
+  },
+  {
+    category: "Climate Adaptation & Resilience",
+    issues: [
+      { value: "flooding",     label: "Flood & sea level rise" },
+      { value: "wildfire",     label: "Wildfire policy" },
+      { value: "drought-heat", label: "Drought & heat" },
+      { value: "disaster",     label: "Disaster resilience" },
+    ],
+  },
+  {
+    category: "International & Finance",
+    issues: [
+      { value: "paris",           label: "Paris Agreement" },
+      { value: "climate-finance", label: "Climate finance" },
+      { value: "methane",         label: "Methane regulation" },
+      { value: "offsets",         label: "Carbon offsets & markets" },
+    ],
+  },
+  {
+    category: "Governance & Policy",
+    issues: [
+      { value: "epa",         label: "EPA authority" },
+      { value: "ira",         label: "Inflation Reduction Act" },
+      { value: "gnd",         label: "Green New Deal" },
+      { value: "nepa",        label: "Environmental review (NEPA)" },
+      { value: "disclosure",  label: "Climate disclosure" },
+    ],
+  },
+];
+
 function ScoreBadge({ score }) {
   if (score === null) return (
     <span style={{ background: "#2a2a2a", color: "#888", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontFamily: "monospace" }}>
@@ -254,9 +326,20 @@ function CandidateCard({ candidate, onAnalyze, analyzing }) {
               <div style={{ color: "#27ae60", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
                 ✦ AI CLIMATE ANALYSIS
               </div>
-              <div style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => <p style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7, margin: "6px 0" }}>{children}</p>,
+                  strong: ({ children }) => <strong style={{ color: "#ddd" }}>{children}</strong>,
+                  ul: ({ children }) => <ul style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7, paddingLeft: 18, margin: "6px 0" }}>{children}</ul>,
+                  ol: ({ children }) => <ol style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7, paddingLeft: 18, margin: "6px 0" }}>{children}</ol>,
+                  li: ({ children }) => <li style={{ marginBottom: 2 }}>{children}</li>,
+                  h1: ({ children }) => <h1 style={{ color: "#fff", fontSize: 15, margin: "10px 0 4px" }}>{children}</h1>,
+                  h2: ({ children }) => <h2 style={{ color: "#fff", fontSize: 14, margin: "10px 0 4px" }}>{children}</h2>,
+                  h3: ({ children }) => <h3 style={{ color: "#ccc", fontSize: 13, margin: "8px 0 4px" }}>{children}</h3>,
+                }}
+              >
                 {candidate.climateAnalysis}
-              </div>
+              </ReactMarkdown>
             </div>
           )}
 
@@ -285,7 +368,7 @@ function CandidateCard({ candidate, onAnalyze, analyzing }) {
 export default function ClimateTracker() {
   const [candidates, setCandidates] = useState(CANDIDATES);
   const [analyzing, setAnalyzing] = useState(null);
-  const [filter, setFilter] = useState({ party: "all", state: "", competitiveness: "all", analyzed: "all" });
+  const [filter, setFilter] = useState({ party: "all", state: "", competitiveness: "all", analyzed: "all", issue: "all" });
   const [globalError, setGlobalError] = useState(null);
 
   const states = [...new Set(candidates.map(c => c.state))].sort();
@@ -297,29 +380,22 @@ export default function ClimateTracker() {
     if (filter.competitiveness !== "all" && c.raceCompetitiveness !== filter.competitiveness) return false;
     if (filter.analyzed === "yes" && c.climateScore === null) return false;
     if (filter.analyzed === "no" && c.climateScore !== null) return false;
+    if (filter.issue !== "all" && !c.issues?.includes(filter.issue)) return false;
     return true;
+  }).sort((a, b) => {
+    const lastName = name => name.split(" ").at(-1);
+    return lastName(a.name).localeCompare(lastName(b.name));
   });
 
   const analyzeCandidate = async (candidate) => {
     setAnalyzing(candidate.id);
     setGlobalError(null);
     try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidate }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `API error: ${response.status}`);
-      }
-
-      const { text, score } = await response.json();
+      const { text, score, issues } = await fetchAnalysis(candidate);
 
       setCandidates(prev => prev.map(c =>
         c.id === candidate.id
-          ? { ...c, climateScore: score, climateAnalysis: text }
+          ? { ...c, climateScore: score, climateAnalysis: text, issues }
           : c
       ));
     } catch (err) {
@@ -350,13 +426,6 @@ export default function ClimateTracker() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#080808", color: "#fff", fontFamily: "'DM Sans', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #111; } ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        select option { background: #111; }
-      `}</style>
-
       {/* Header */}
       <div style={{ borderBottom: "1px solid #1a1a1a", padding: "24px 32px", background: "#080808" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -388,6 +457,16 @@ export default function ClimateTracker() {
 
           {/* Filters */}
           <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <select style={selectStyle} value={filter.issue} onChange={e => setFilter(f => ({ ...f, issue: e.target.value }))}>
+              <option value="all">All Issues</option>
+              {ISSUE_FILTERS.map(group => (
+                <optgroup key={group.category} label={group.category}>
+                  {group.issues.map(issue => (
+                    <option key={issue.value} value={issue.value}>{issue.label}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
             <select style={selectStyle} value={filter.party} onChange={e => setFilter(f => ({ ...f, party: e.target.value }))}>
               <option value="all">All Parties</option>
               <option value="D">Democrat</option>
