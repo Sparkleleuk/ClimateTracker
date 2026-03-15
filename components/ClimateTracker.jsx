@@ -305,7 +305,7 @@ const COMPARE_ISSUES = [
 
 function ScoreBadge({ score }) {
   if (score === null) return (
-    <span style={{ background: "#2a2a2a", color: "#888", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontFamily: "monospace" }}>
+    <span style={{ background: "var(--bg-badge-na)", color: "var(--badge-na-color)", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontFamily: "monospace" }}>
       NOT ANALYZED
     </span>
   );
@@ -322,18 +322,18 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
 
   return (
     <div style={{
-      background: "#111", border: "1px solid #222", borderRadius: 12,
+      background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12,
       overflow: "hidden", transition: "border-color 0.2s",
       borderLeft: `4px solid ${PARTY_COLOR[candidate.party]}`,
     }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = "#333"; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = "#222"; }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
     >
       <div style={{ padding: "16px 20px", cursor: "pointer" }} onClick={() => setExpanded(!expanded)}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ color: "#fff", fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700 }}>
+              <span style={{ color: "var(--text-1)", fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700 }}>
                 {candidate.name}
               </span>
               <span style={{
@@ -343,12 +343,12 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
                 {PARTY_LABEL[candidate.party]}
               </span>
               {candidate.incumbentStatus.includes("incumbent") && (
-                <span style={{ background: "#1a1a1a", color: "#aaa", border: "1px solid #333", padding: "2px 8px", borderRadius: 4, fontSize: 11 }}>
+                <span style={{ background: "var(--bg-elevated)", color: "var(--text-5)", border: "1px solid var(--border-strong)", padding: "2px 8px", borderRadius: 4, fontSize: 11 }}>
                   {candidate.incumbentStatus === "incumbent (appointed)" ? "Appointed" : "Incumbent"}
                 </span>
               )}
             </div>
-            <div style={{ color: "#888", fontSize: 13, marginTop: 4, fontFamily: "'DM Mono', monospace" }}>
+            <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4, fontFamily: "'DM Mono', monospace" }}>
               {candidate.state} · {candidate.office}
             </div>
           </div>
@@ -362,68 +362,68 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
               {candidate.raceCompetitiveness}
             </span>
             <ScoreBadge score={candidate.climateScore} />
-            <span style={{ color: "#555", fontSize: 16 }}>{expanded ? "▲" : "▼"}</span>
+            <span style={{ color: "var(--text-dim)", fontSize: 16 }}>{expanded ? "▲" : "▼"}</span>
           </div>
         </div>
       </div>
 
       {expanded && (
-        <div style={{ padding: "0 20px 20px", borderTop: "1px solid #1a1a1a" }}>
+        <div style={{ padding: "0 20px 20px", borderTop: "1px solid var(--border-mid)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 16 }}>
-            <div style={{ background: "#0d0d0d", borderRadius: 8, padding: 12 }}>
-              <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>PRIMARY DATE</div>
-              <div style={{ color: "#ddd", fontSize: 13 }}>{candidate.primaryDate}</div>
+            <div style={{ background: "var(--bg-inner)", borderRadius: 8, padding: 12 }}>
+              <div style={{ color: "var(--text-dim)", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>PRIMARY DATE</div>
+              <div style={{ color: "var(--text-2)", fontSize: 13 }}>{candidate.primaryDate}</div>
             </div>
-            <div style={{ background: "#0d0d0d", borderRadius: 8, padding: 12 }}>
-              <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>GENERAL ELECTION</div>
-              <div style={{ color: "#ddd", fontSize: 13 }}>{candidate.generalDate}</div>
+            <div style={{ background: "var(--bg-inner)", borderRadius: 8, padding: 12 }}>
+              <div style={{ color: "var(--text-dim)", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>GENERAL ELECTION</div>
+              <div style={{ color: "var(--text-2)", fontSize: 13 }}>{candidate.generalDate}</div>
             </div>
             {candidate.opponent && (
-              <div style={{ background: "#0d0d0d", borderRadius: 8, padding: 12 }}>
-                <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>OPPONENT</div>
-                <div style={{ color: "#ddd", fontSize: 13 }}>{candidate.opponent}</div>
+              <div style={{ background: "var(--bg-inner)", borderRadius: 8, padding: 12 }}>
+                <div style={{ color: "var(--text-dim)", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>OPPONENT</div>
+                <div style={{ color: "var(--text-2)", fontSize: 13 }}>{candidate.opponent}</div>
               </div>
             )}
-            <div style={{ background: "#0d0d0d", borderRadius: 8, padding: 12 }}>
-              <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>FOSSIL FUEL $</div>
-              <div style={{ color: "#ddd", fontSize: 13 }}>
+            <div style={{ background: "var(--bg-inner)", borderRadius: 8, padding: 12 }}>
+              <div style={{ color: "var(--text-dim)", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>FOSSIL FUEL $</div>
+              <div style={{ color: "var(--text-2)", fontSize: 13 }}>
                 {FOSSIL_ICON[candidate.fossilFuelDonations]}{" "}
                 {candidate.fossilFuelAmount ?? candidate.fossilFuelDonations}
               </div>
               {candidate.fossilFuelCycle && (
-                <div style={{ color: "#555", fontSize: 11, marginTop: 3, fontFamily: "'DM Mono', monospace" }}>
+                <div style={{ color: "var(--text-dim)", fontSize: 11, marginTop: 3, fontFamily: "'DM Mono', monospace" }}>
                   {candidate.fossilFuelCycle}
                 </div>
               )}
               {candidate.fossilFuelSource && (
                 <a href={candidate.fossilFuelSource} target="_blank" rel="noopener noreferrer"
-                  style={{ color: "#27ae60", fontSize: 11, fontFamily: "'DM Mono', monospace", textDecoration: "none", display: "block", marginTop: 4 }}>
+                  style={{ color: "var(--accent)", fontSize: 11, fontFamily: "'DM Mono', monospace", textDecoration: "none", display: "block", marginTop: 4 }}>
                   Source ↗
                 </a>
               )}
             </div>
           </div>
 
-          <div style={{ background: "#0d0d0d", borderRadius: 8, padding: 12, marginTop: 12 }}>
-            <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>KNOWN CLIMATE POSITIONS</div>
-            <div style={{ color: "#bbb", fontSize: 13, lineHeight: 1.6 }}>{candidate.knownPositions}</div>
+          <div style={{ background: "var(--bg-inner)", borderRadius: 8, padding: 12, marginTop: 12 }}>
+            <div style={{ color: "var(--text-dim)", fontSize: 11, letterSpacing: 1, marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>KNOWN CLIMATE POSITIONS</div>
+            <div style={{ color: "var(--text-4)", fontSize: 13, lineHeight: 1.6 }}>{candidate.knownPositions}</div>
           </div>
 
           {candidate.climateAnalysis && (
-            <div style={{ background: "#0a1a0a", border: "1px solid #1a3a1a", borderRadius: 8, padding: 14, marginTop: 12 }}>
-              <div style={{ color: "#27ae60", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
+            <div style={{ background: "var(--bg-analysis)", border: "1px solid var(--border-analysis)", borderRadius: 8, padding: 14, marginTop: 12 }}>
+              <div style={{ color: "var(--analysis-label)", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
                 ✦ AI CLIMATE ANALYSIS
               </div>
               <ReactMarkdown
                 components={{
-                  p: ({ children }) => <p style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7, margin: "6px 0" }}>{children}</p>,
-                  strong: ({ children }) => <strong style={{ color: "#ddd" }}>{children}</strong>,
-                  ul: ({ children }) => <ul style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7, paddingLeft: 18, margin: "6px 0" }}>{children}</ul>,
-                  ol: ({ children }) => <ol style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7, paddingLeft: 18, margin: "6px 0" }}>{children}</ol>,
+                  p: ({ children }) => <p style={{ color: "var(--text-4)", fontSize: 13, lineHeight: 1.7, margin: "6px 0" }}>{children}</p>,
+                  strong: ({ children }) => <strong style={{ color: "var(--text-2)" }}>{children}</strong>,
+                  ul: ({ children }) => <ul style={{ color: "var(--text-4)", fontSize: 13, lineHeight: 1.7, paddingLeft: 18, margin: "6px 0" }}>{children}</ul>,
+                  ol: ({ children }) => <ol style={{ color: "var(--text-4)", fontSize: 13, lineHeight: 1.7, paddingLeft: 18, margin: "6px 0" }}>{children}</ol>,
                   li: ({ children }) => <li style={{ marginBottom: 2 }}>{children}</li>,
-                  h1: ({ children }) => <h1 style={{ color: "#fff", fontSize: 15, margin: "10px 0 4px" }}>{children}</h1>,
-                  h2: ({ children }) => <h2 style={{ color: "#fff", fontSize: 14, margin: "10px 0 4px" }}>{children}</h2>,
-                  h3: ({ children }) => <h3 style={{ color: "#ccc", fontSize: 13, margin: "8px 0 4px" }}>{children}</h3>,
+                  h1: ({ children }) => <h1 style={{ color: "var(--text-1)", fontSize: 15, margin: "10px 0 4px" }}>{children}</h1>,
+                  h2: ({ children }) => <h2 style={{ color: "var(--text-1)", fontSize: 14, margin: "10px 0 4px" }}>{children}</h2>,
+                  h3: ({ children }) => <h3 style={{ color: "var(--text-3)", fontSize: 13, margin: "8px 0 4px" }}>{children}</h3>,
                 }}
               >
                 {candidate.climateAnalysis}
@@ -436,9 +436,9 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
               onClick={() => onAnalyze(candidate)}
               disabled={analyzing === candidate.id}
               style={{
-                background: analyzing === candidate.id ? "#1a3a1a" : "#0f2a0f",
-                color: analyzing === candidate.id ? "#555" : "#27ae60",
-                border: "1px solid #27ae6044",
+                background: analyzing === candidate.id ? "var(--bg-btn-analyze-act)" : "var(--bg-btn-analyze)",
+                color: analyzing === candidate.id ? "var(--btn-analyze-dis)" : "var(--btn-analyze-color)",
+                border: "1px solid var(--accent-btn-border)",
                 padding: "8px 18px", borderRadius: 6, cursor: analyzing === candidate.id ? "not-allowed" : "pointer",
                 fontSize: 13, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
                 transition: "all 0.2s"
@@ -449,8 +449,8 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
             <button
               onClick={e => { e.stopPropagation(); onCompare(candidate); }}
               style={{
-                background: "#0a1a2a", color: "#5ba3d9",
-                border: "1px solid #5ba3d944",
+                background: "var(--bg-btn-compare)", color: "var(--btn-compare-color)",
+                border: "1px solid var(--btn-compare-border)",
                 padding: "8px 18px", borderRadius: 6, cursor: "pointer",
                 fontSize: 13, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
                 transition: "all 0.2s"
@@ -498,43 +498,43 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
   const isTie = result?.winner === "Tie";
 
   const panelStyle = (isWinner) => ({
-    flex: 1, background: isWinner ? "#0a1a0a" : "#0d0d0d",
-    border: `1px solid ${isWinner ? "#27ae6055" : "#1a1a1a"}`,
+    flex: 1, background: isWinner ? "var(--bg-winner)" : "var(--bg-inner)",
+    border: `1px solid ${isWinner ? "var(--border-winner)" : "var(--border-mid)"}`,
     borderRadius: 10, padding: 20,
   });
 
-  const scoreColor = s => s >= 70 ? "#27ae60" : s >= 40 ? "#e67e22" : s != null ? "#c0392b" : "#555";
+  const scoreColor = s => s >= 70 ? "#27ae60" : s >= 40 ? "#e67e22" : s != null ? "#c0392b" : "var(--text-dim)";
 
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 200,
-      background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-start",
+      background: "var(--overlay)", display: "flex", alignItems: "flex-start",
       justifyContent: "center", overflowY: "auto", padding: "32px 16px",
     }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
-        background: "#0d0d0d", border: "1px solid #222", borderRadius: 16,
+        background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: 16,
         width: "100%", maxWidth: 900, padding: 32, position: "relative",
       }}>
         {/* Close */}
         <button onClick={onClose} style={{
-          position: "absolute", top: 16, right: 16, background: "#1a1a1a",
-          border: "1px solid #333", color: "#888", borderRadius: 6,
+          position: "absolute", top: 16, right: 16, background: "var(--bg-elevated)",
+          border: "1px solid var(--border-strong)", color: "var(--close-color)", borderRadius: 6,
           padding: "4px 12px", cursor: "pointer", fontSize: 13, fontFamily: "'DM Mono', monospace",
         }}>Close</button>
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
-          <div style={{ color: "#27ae60", fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 2, marginBottom: 10 }}>
+          <div style={{ color: "var(--accent)", fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 2, marginBottom: 10 }}>
             CANDIDATE COMPARISON
           </div>
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
             {/* Primary candidate */}
             <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ color: "#555", fontSize: 10, letterSpacing: 1, fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>PRIMARY</div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#fff" }}>{c1.name}</div>
-              <div style={{ color: "#888", fontSize: 13, fontFamily: "'DM Mono', monospace", marginTop: 2 }}>
+              <div style={{ color: "var(--text-dim)", fontSize: 10, letterSpacing: 1, fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>PRIMARY</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "var(--text-1)" }}>{c1.name}</div>
+              <div style={{ color: "var(--text-muted)", fontSize: 13, fontFamily: "'DM Mono', monospace", marginTop: 2 }}>
                 {c1.state} · {PARTY_LABEL[c1.party]}
               </div>
               <div style={{ marginTop: 6 }}>
@@ -548,13 +548,13 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
             </div>
             {/* Opponent selector */}
             <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ color: "#555", fontSize: 10, letterSpacing: 1, fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>OPPONENT</div>
+              <div style={{ color: "var(--text-dim)", fontSize: 10, letterSpacing: 1, fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>OPPONENT</div>
               {opponents.length > 1 ? (
                 <select
                   value={selectedOpponentId}
                   onChange={e => { setSelectedOpponentId(Number(e.target.value)); setResult(null); setError(null); }}
                   style={{
-                    background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
+                    background: "var(--bg-card)", color: "var(--text-3)", border: "1px solid var(--border-subtle)",
                     padding: "6px 10px", borderRadius: 6, fontSize: 14,
                     fontFamily: "'DM Mono', monospace", cursor: "pointer", outline: "none", marginBottom: 6,
                   }}
@@ -562,11 +562,11 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
                   {opponents.map(o => <option key={o.id} value={o.id}>{o.name} ({PARTY_LABEL[o.party]})</option>)}
                 </select>
               ) : (
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#fff" }}>{c2?.name}</div>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "var(--text-1)" }}>{c2?.name}</div>
               )}
               {c2 && (
                 <>
-                  <div style={{ color: "#888", fontSize: 13, fontFamily: "'DM Mono', monospace", marginTop: 2 }}>
+                  <div style={{ color: "var(--text-muted)", fontSize: 13, fontFamily: "'DM Mono', monospace", marginTop: 2 }}>
                     {c2.state} · {PARTY_LABEL[c2.party]}
                   </div>
                   <div style={{ marginTop: 6 }}>
@@ -586,12 +586,12 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
         {/* Issue selector */}
         {c2 && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-            <span style={{ color: "#555", fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1 }}>ISSUE:</span>
+            <span style={{ color: "var(--text-dim)", fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1 }}>ISSUE:</span>
             <select
               value={issue}
               onChange={e => { setIssue(e.target.value); setResult(null); setError(null); }}
               style={{
-                background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
+                background: "var(--bg-card)", color: "var(--text-3)", border: "1px solid var(--border-subtle)",
                 padding: "8px 12px", borderRadius: 6, fontSize: 13,
                 fontFamily: "'DM Mono', monospace", cursor: "pointer", outline: "none",
               }}
@@ -599,15 +599,16 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
               {COMPARE_ISSUES.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
             </select>
             <button onClick={runComparison} disabled={loading} style={{
-              background: loading ? "#1a3a1a" : "#0f2a0f", color: loading ? "#555" : "#27ae60",
-              border: "1px solid #27ae6044", padding: "8px 18px", borderRadius: 6,
+              background: loading ? "var(--bg-btn-analyze-act)" : "var(--bg-btn-analyze)",
+              color: loading ? "var(--btn-analyze-dis)" : "var(--btn-analyze-color)",
+              border: "1px solid var(--accent-btn-border)", padding: "8px 18px", borderRadius: 6,
               cursor: loading ? "not-allowed" : "pointer", fontSize: 13,
               fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
             }}>
               {loading ? "⟳ Running..." : cacheKey && cache[cacheKey] ? "✦ Cached — Re-run" : "✦ Run AI Comparison"}
             </button>
             {cacheKey && cache[cacheKey] && !loading && result && (
-              <span style={{ color: "#444", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>From cache</span>
+              <span style={{ color: "var(--text-deep)", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>From cache</span>
             )}
           </div>
         )}
@@ -616,23 +617,23 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
         {c2 && (
           <div style={{ display: "flex", gap: 12, marginBottom: result || error ? 20 : 0 }}>
             {[c1, c2].map(c => (
-              <div key={c.id} style={{ flex: 1, background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 8, padding: 14 }}>
-                <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>
+              <div key={c.id} style={{ flex: 1, background: "var(--bg-inner)", border: "1px solid var(--border-mid)", borderRadius: 8, padding: 14 }}>
+                <div style={{ color: "var(--text-dim)", fontSize: 11, letterSpacing: 1, marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>
                   {c.name.toUpperCase()} — KNOWN POSITIONS
                 </div>
-                <div style={{ color: "#bbb", fontSize: 13, lineHeight: 1.6 }}>{c.knownPositions}</div>
+                <div style={{ color: "var(--text-4)", fontSize: 13, lineHeight: 1.6 }}>{c.knownPositions}</div>
               </div>
             ))}
           </div>
         )}
         {!c2 && (
-          <div style={{ background: "#1a1a0a", border: "1px solid #e67e2244", borderRadius: 6, padding: "10px 14px", color: "#e67e22", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
+          <div style={{ background: "var(--bg-no-opp)", border: "1px solid var(--border-no-opp)", borderRadius: 6, padding: "10px 14px", color: "var(--no-opp-color)", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
             No tracked opponents found for this candidate in the same race.
           </div>
         )}
 
         {error && (
-          <div style={{ background: "#1a0a0a", border: "1px solid #c0392b44", borderRadius: 6, padding: "10px 14px", color: "#e74c3c", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
+          <div style={{ background: "var(--bg-error)", border: "1px solid var(--border-error)", borderRadius: 6, padding: "10px 14px", color: "var(--error-color)", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
             {error}
           </div>
         )}
@@ -641,17 +642,17 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
           <div>
             {/* Winner banner */}
             <div style={{
-              background: isTie ? "#1a1a0a" : "#0a1a0a",
-              border: `1px solid ${isTie ? "#e67e2255" : "#27ae6055"}`,
+              background: isTie ? "var(--bg-tie)" : "var(--bg-winner)",
+              border: `1px solid ${isTie ? "var(--border-tie)" : "var(--border-winner)"}`,
               borderRadius: 8, padding: "12px 16px", marginBottom: 16,
               display: "flex", alignItems: "center", gap: 10,
             }}>
               <span style={{ fontSize: 18 }}>{isTie ? "⚖️" : "🏆"}</span>
               <div>
-                <div style={{ color: isTie ? "#e67e22" : "#27ae60", fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1 }}>
+                <div style={{ color: isTie ? "#e67e22" : "var(--accent)", fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1 }}>
                   {isTie ? "TIE" : "STRONGER RECORD"}
                 </div>
-                <div style={{ color: "#ddd", fontSize: 14, marginTop: 2 }}>
+                <div style={{ color: "var(--text-2)", fontSize: 14, marginTop: 2 }}>
                   <strong>{result.winner}</strong> — {result.winnerReason}
                 </div>
               </div>
@@ -660,23 +661,23 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
             {/* Side-by-side positions */}
             <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
               <div style={panelStyle(winnerIsC1)}>
-                <div style={{ color: winnerIsC1 ? "#27ae60" : "#555", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
+                <div style={{ color: winnerIsC1 ? "var(--accent)" : "var(--text-dim)", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
                   {winnerIsC1 ? "🏆 " : ""}{c1.name.toUpperCase()}
                 </div>
-                <div style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7 }}>{result.candidate1Position}</div>
+                <div style={{ color: "var(--text-4)", fontSize: 13, lineHeight: 1.7 }}>{result.candidate1Position}</div>
               </div>
               <div style={panelStyle(winnerIsC2)}>
-                <div style={{ color: winnerIsC2 ? "#27ae60" : "#555", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
+                <div style={{ color: winnerIsC2 ? "var(--accent)" : "var(--text-dim)", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
                   {winnerIsC2 ? "🏆 " : ""}{c2.name.toUpperCase()}
                 </div>
-                <div style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7 }}>{result.candidate2Position}</div>
+                <div style={{ color: "var(--text-4)", fontSize: 13, lineHeight: 1.7 }}>{result.candidate2Position}</div>
               </div>
             </div>
 
             {/* Key difference */}
-            <div style={{ background: "#111", border: "1px solid #222", borderRadius: 8, padding: 14 }}>
-              <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>KEY DIFFERENCE</div>
-              <div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.6 }}>{result.keyDifference}</div>
+            <div style={{ background: "var(--bg-inner)", border: "1px solid var(--border)", borderRadius: 8, padding: 14 }}>
+              <div style={{ color: "var(--text-dim)", fontSize: 11, letterSpacing: 1, marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>KEY DIFFERENCE</div>
+              <div style={{ color: "var(--text-3)", fontSize: 13, lineHeight: 1.6 }}>{result.keyDifference}</div>
             </div>
           </div>
         )}
@@ -692,6 +693,7 @@ export default function ClimateTracker() {
   const [globalError, setGlobalError] = useState(null);
   const [compareCandidate, setCompareCandidate] = useState(null);
   const [compareCache, setCompareCache] = useState({});
+  const [dark, setDark] = useState(true);
 
   const getOpponents = (candidate) =>
     candidates.filter(c => c.state === candidate.state && c.office === candidate.office && c.id !== candidate.id);
@@ -745,15 +747,15 @@ export default function ClimateTracker() {
     : null;
 
   const selectStyle = {
-    background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
+    background: "var(--bg-card)", color: "var(--text-3)", border: "1px solid var(--border-subtle)",
     padding: "8px 12px", borderRadius: 6, fontSize: 13,
     fontFamily: "'DM Mono', monospace", cursor: "pointer", outline: "none"
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#080808", color: "#fff", fontFamily: "'DM Sans', sans-serif" }}>
+    <div data-theme={dark ? "dark" : "light"} style={{ minHeight: "100vh", background: "var(--bg-page)", color: "var(--text-1)", fontFamily: "'DM Sans', sans-serif" }}>
       {/* Header */}
-      <div style={{ borderBottom: "1px solid #1a1a1a", padding: "24px 32px", background: "#080808" }}>
+      <div style={{ borderBottom: "1px solid var(--border-mid)", padding: "24px 32px", background: "var(--bg-page)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
             <div>
@@ -763,21 +765,32 @@ export default function ClimateTracker() {
                   Climate Candidate Tracker
                 </h1>
               </div>
-              <p style={{ margin: "6px 0 0 40px", color: "#555", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
+              <p style={{ margin: "6px 0 0 40px", color: "var(--text-dim)", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
                 2026 U.S. Primaries & Midterm Elections · AI-Powered Analysis
               </p>
             </div>
-            <div style={{ display: "flex", gap: 24 }}>
+            <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
               {[
                 { label: "Candidates", value: candidates.length },
                 { label: "Analyzed", value: analyzedCount },
                 { label: "Avg Score", value: avgScore !== null ? `${avgScore}/100` : "—" },
               ].map(({ label, value }) => (
                 <div key={label} style={{ textAlign: "right" }}>
-                  <div style={{ color: "#27ae60", fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 500 }}>{value}</div>
-                  <div style={{ color: "#444", fontSize: 11, letterSpacing: 1 }}>{label}</div>
+                  <div style={{ color: "var(--accent)", fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 500 }}>{value}</div>
+                  <div style={{ color: "var(--text-deep)", fontSize: 11, letterSpacing: 1 }}>{label}</div>
                 </div>
               ))}
+              <button
+                onClick={() => setDark(d => !d)}
+                title={dark ? "Switch to light mode" : "Switch to dark mode"}
+                style={{
+                  background: "var(--toggle-bg)", border: "1px solid var(--toggle-border)",
+                  color: "var(--toggle-color)", borderRadius: 8, padding: "8px 12px",
+                  cursor: "pointer", fontSize: 16, lineHeight: 1, marginLeft: 8,
+                }}
+              >
+                {dark ? "☀️" : "🌙"}
+              </button>
             </div>
           </div>
 
@@ -823,7 +836,7 @@ export default function ClimateTracker() {
               onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
               className="filter-search"
               style={{
-                background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
+                background: "var(--bg-card)", color: "var(--text-3)", border: "1px solid var(--border-subtle)",
                 padding: "8px 12px", borderRadius: 6, fontSize: 13,
                 fontFamily: "'DM Mono', monospace", outline: "none",
               }}
@@ -833,7 +846,7 @@ export default function ClimateTracker() {
               onClick={analyzeAll}
               disabled={analyzing !== null}
               style={{
-                background: "#0f2a0f", color: "#27ae60", border: "1px solid #27ae6055",
+                background: "var(--bg-btn-analyze)", color: "var(--btn-analyze-color)", border: "1px solid var(--accent-btn-border)",
                 padding: "8px 16px", borderRadius: 6, cursor: analyzing ? "not-allowed" : "pointer",
                 fontSize: 12, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, whiteSpace: "nowrap",
               }}
@@ -843,7 +856,7 @@ export default function ClimateTracker() {
           </div>
 
           {globalError && (
-            <div style={{ marginTop: 12, background: "#1a0a0a", border: "1px solid #c0392b44", borderRadius: 6, padding: "10px 14px", color: "#e74c3c", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
+            <div style={{ marginTop: 12, background: "var(--bg-error)", border: "1px solid var(--border-error)", borderRadius: 6, padding: "10px 14px", color: "var(--error-color)", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
               {globalError}
             </div>
           )}
@@ -854,16 +867,16 @@ export default function ClimateTracker() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 32px" }}>
         {/* Legend */}
         <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
-          <span style={{ color: "#444", fontSize: 12, fontFamily: "'DM Mono', monospace", alignSelf: "center" }}>SCORE:</span>
-          {[["≥70 Strong", "#27ae60"], ["40–69 Mixed", "#e67e22"], ["<40 Weak", "#c0392b"], ["Not Analyzed", "#444"]].map(([label, color]) => (
-            <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#888" }}>
+          <span style={{ color: "var(--text-deep)", fontSize: 12, fontFamily: "'DM Mono', monospace", alignSelf: "center" }}>SCORE:</span>
+          {[["≥70 Strong", "#27ae60"], ["40–69 Mixed", "#e67e22"], ["<40 Weak", "#c0392b"], ["Not Analyzed", "var(--text-deep)"]].map(([label, color]) => (
+            <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
               <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block" }} />
               {label}
             </span>
           ))}
         </div>
 
-        <div style={{ color: "#444", fontSize: 12, fontFamily: "'DM Mono', monospace", marginBottom: 16 }}>
+        <div style={{ color: "var(--text-deep)", fontSize: 12, fontFamily: "'DM Mono', monospace", marginBottom: 16 }}>
           SHOWING {filtered.length} OF {candidates.length} CANDIDATES
         </div>
 
@@ -875,14 +888,14 @@ export default function ClimateTracker() {
         </div>
 
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: 60, color: "#333", fontFamily: "'DM Mono', monospace" }}>
+          <div style={{ textAlign: "center", padding: 60, color: "var(--text-ghost)", fontFamily: "'DM Mono', monospace" }}>
             No candidates match your filters.
           </div>
         )}
 
         {/* Footer */}
-        <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid #1a1a1a", color: "#333", fontSize: 12, fontFamily: "'DM Mono', monospace", lineHeight: 1.8 }}>
-          <div style={{ marginBottom: 6, color: "#444" }}>DATA SOURCES & METHODOLOGY</div>
+        <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid var(--border-mid)", color: "var(--text-ghost)", fontSize: 12, fontFamily: "'DM Mono', monospace", lineHeight: 1.8 }}>
+          <div style={{ marginBottom: 6, color: "var(--text-deep)" }}>DATA SOURCES & METHODOLOGY</div>
           Candidate data sourced from Wikipedia, Ballotpedia, and news reporting (as of March 2026). AI analysis powered by Claude (Anthropic). Scores reflect climate policy alignment with scientific consensus — not party affiliation. Race competitiveness ratings from Cook Political Report / Sabato&apos;s Crystal Ball. Fossil fuel donation levels are indicative estimates pending FEC data integration. This tracker is for informational purposes; always verify with primary sources.
         </div>
       </div>
