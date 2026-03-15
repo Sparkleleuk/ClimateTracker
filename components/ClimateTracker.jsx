@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { analyzeCandidate as fetchAnalysis } from "../services/climateApi";
+import { compareCandiates } from "../services/compareApi";
 import ReactMarkdown from "react-markdown";
 
 const CANDIDATES = [
@@ -11,6 +12,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Has broken with party on some climate votes; supported offshore wind. Voted against IRA.",
     fossilFuelDonations: "moderate",
+    fossilFuelAmount: "$289,469", fossilFuelCycle: "2020 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/members-of-congress/susan-collins/industries?cid=N00000491&cycle=2020",
+    opponent: "Janet Mills (D)",
   },
   {
     id: 2, name: "Jon Ossoff", state: "Georgia", office: "U.S. Senate", party: "D",
@@ -19,6 +23,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Voted for IRA. Supports clean energy investment and EV manufacturing in Georgia.",
     fossilFuelDonations: "low",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/members-of-congress/jon-ossoff/industries?cid=N00040675&cycle=2026",
+    opponent: "R primary: Mike Collins, Buddy Carter, Derek Dooley",
   },
   {
     id: 3, name: "Roy Cooper", state: "North Carolina", office: "U.S. Senate", party: "D",
@@ -27,6 +34,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "As Governor signed executive orders on clean energy; set 2050 carbon neutrality goals for NC.",
     fossilFuelDonations: "low",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/races/industries?id=SNC2026",
+    opponent: "Michael Whatley (R)",
   },
   {
     id: 4, name: "Michael Whatley", state: "North Carolina", office: "U.S. Senate", party: "R",
@@ -35,6 +45,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Former RNC Chairman. Trump-endorsed. Limited public climate record.",
     fossilFuelDonations: "unknown",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/races/industries?id=SNC2026",
+    opponent: "Roy Cooper (D)",
   },
   {
     id: 5, name: "Janet Mills", state: "Maine", office: "U.S. Senate", party: "D",
@@ -43,6 +56,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "As Maine Governor, set 100% clean electricity goal by 2040. Strong environmental record.",
     fossilFuelDonations: "low",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/races/industries?id=SME2026",
+    opponent: "Susan Collins (R)",
   },
   {
     id: 6, name: "Sherrod Brown", state: "Ohio", office: "U.S. Senate (Special)", party: "D",
@@ -51,6 +67,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Former Senator; has supported clean energy manufacturing. Mixed fossil fuel record for Ohio.",
     fossilFuelDonations: "moderate",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/members-of-congress/sherrod-brown/industries?cid=N00003374&cycle=2024",
+    opponent: "Jon Husted (R)",
   },
   {
     id: 7, name: "Jon Husted", state: "Ohio", office: "U.S. Senate (Special)", party: "R",
@@ -59,6 +78,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Appointed by Gov. DeWine. Supportive of Ohio energy sector including natural gas.",
     fossilFuelDonations: "moderate",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/races/industries?id=SOH2026",
+    opponent: "Sherrod Brown (D)",
   },
   {
     id: 8, name: "Ashley Hinson", state: "Iowa", office: "U.S. Senate", party: "R",
@@ -67,6 +89,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Congresswoman. Supports wind energy (Iowa is major wind state). Opposed carbon pricing.",
     fossilFuelDonations: "moderate",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/members-of-congress/ashley-hinson/industries?cid=N00044544&cycle=2024",
+    opponent: "D primary: Zach Wahls (leading), Josh Turek",
   },
   {
     id: 9, name: "John Cornyn", state: "Texas", office: "U.S. Senate", party: "R",
@@ -75,6 +100,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Strongly pro-oil & gas. Opposed IRA, climate regulations. Supported LNG exports.",
     fossilFuelDonations: "high",
+    fossilFuelAmount: "$4,067,906", fossilFuelCycle: "Career total (through 2020)",
+    fossilFuelSource: "https://www.opensecrets.org/members-of-congress/john-cornyn/industries?cid=N00024852",
+    opponent: "James Talarico (D); Cornyn in R runoff vs. Ken Paxton (May 26)",
   },
   {
     id: 10, name: "Mark Warner", state: "Virginia", office: "U.S. Senate", party: "D",
@@ -83,6 +111,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Voted for IRA. Supports offshore wind off Virginia coast. Climate-focused record.",
     fossilFuelDonations: "low",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/members-of-congress/mark-warner/industries?cid=N00002097&cycle=2026",
+    opponent: "David Williams (R)",
   },
   {
     id: 11, name: "Cory Booker", state: "New Jersey", office: "U.S. Senate", party: "D",
@@ -91,6 +122,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Strong climate champion. Co-sponsored Green New Deal. Advocates environmental justice.",
     fossilFuelDonations: "low",
+    fossilFuelAmount: "$0", fossilFuelCycle: "Ongoing",
+    fossilFuelSource: "https://nofossilfuelmoney.org/pledges/",
+    opponent: "R primary: Alex Zdan (leading), Justin Murphy",
   },
   {
     id: 12, name: "William Cassidy", state: "Louisiana", office: "U.S. Senate", party: "R",
@@ -99,14 +133,20 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Has acknowledged climate science. Supported some coastal restoration. Strong oil & gas ties.",
     fossilFuelDonations: "high",
+    fossilFuelAmount: "$1,554,805", fossilFuelCycle: "Career total (through 2020)",
+    fossilFuelSource: "https://www.opensecrets.org/members-of-congress/bill-cassidy/industries?cid=N00030245",
+    opponent: "Julia Letlow (R primary); D primary: Jamie Davis, Nick Albares",
   },
   {
     id: 13, name: "Ben Ray Luján", state: "New Mexico", office: "U.S. Senate", party: "D",
     incumbentStatus: "incumbent", raceCompetitiveness: "Lean D",
     primaryDate: "June 2, 2026", generalDate: "Nov 3, 2026",
     climateScore: null, climateAnalysis: null,
-    knownPositions: "Voted for IRA. Advocates clean energy transition while balancing New Mexico oil economy.",
-    fossilFuelDonations: "moderate",
+    knownPositions: "Voted for IRA. Advocates clean energy transition while balancing New Mexico oil economy. Pledged not to take fossil fuel exploration money.",
+    fossilFuelDonations: "low",
+    fossilFuelAmount: "$0 (fossil fuel exploration)", fossilFuelCycle: "Pledge since 2019",
+    fossilFuelSource: "https://readsludge.com/2019/04/19/democratic-leader-ben-ray-lujan-endorses-green-new-deal-wont-take-fossil-fuel-exploration-money/",
+    opponent: "No Republican on ballot (disqualified); D primary challenger: Matt Dodson",
   },
   {
     id: 14, name: "Mary Peltola", state: "Alaska", office: "U.S. Senate", party: "D",
@@ -115,6 +155,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Former Rep. Supported some resource development while emphasizing environmental protection for Alaska communities.",
     fossilFuelDonations: "moderate",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/members-of-congress/mary-peltola/industries?cid=N00050780&cycle=2024",
+    opponent: "Dan Sullivan (R, incumbent)",
   },
   // === FLORIDA SPECIAL ===
   {
@@ -124,6 +167,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Appointed AG turned Senator. Florida faces major climate threats (sea level, hurricanes). Limited proactive climate record.",
     fossilFuelDonations: "moderate",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/races/industries?id=SFL2026",
+    opponent: "Alexander Vindman (D)",
   },
   {
     id: 16, name: "Alexander Vindman", state: "Florida", office: "U.S. Senate (Special)", party: "D",
@@ -132,6 +178,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "National security focus. Has cited climate as a national security threat. No detailed legislative climate record.",
     fossilFuelDonations: "low",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/races/industries?id=SFL2026",
+    opponent: "Ashley Moody (R)",
   },
   // === OPEN SEATS ===
   {
@@ -141,6 +190,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Former Senator. Generally skeptical of climate regulations. Opposes carbon taxes.",
     fossilFuelDonations: "moderate",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/races/industries?id=SNH2026",
+    opponent: "Chris Pappas (D)",
   },
   {
     id: 18, name: "Dan Osborn", state: "Nebraska", office: "U.S. Senate", party: "I",
@@ -149,6 +201,9 @@ const CANDIDATES = [
     climateScore: null, climateAnalysis: null,
     knownPositions: "Independent. Ran strong race in 2024. Labor-focused. Climate position not prominently defined.",
     fossilFuelDonations: "low",
+    fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
+    fossilFuelSource: "https://www.opensecrets.org/races/industries?id=SNE2026",
+    opponent: "Pete Ricketts (R, incumbent)",
   },
 ];
 
@@ -236,6 +291,18 @@ const ISSUE_FILTERS = [
   },
 ];
 
+const COMPARE_ISSUES = [
+  { value: "Overall Climate Record", label: "Overall" },
+  { value: "Clean Energy", label: "Clean Energy" },
+  { value: "Fossil Fuels", label: "Fossil Fuels" },
+  { value: "Carbon Pricing", label: "Carbon Pricing" },
+  { value: "Environmental Justice", label: "Environmental Justice" },
+  { value: "Land & Water", label: "Land & Water" },
+  { value: "Transportation", label: "Transportation" },
+  { value: "Pollution & Health", label: "Pollution & Health" },
+  { value: "Climate Resilience", label: "Climate Resilience" },
+];
+
 function ScoreBadge({ score }) {
   if (score === null) return (
     <span style={{ background: "#2a2a2a", color: "#888", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontFamily: "monospace" }}>
@@ -250,16 +317,17 @@ function ScoreBadge({ score }) {
   );
 }
 
-function CandidateCard({ candidate, onAnalyze, analyzing }) {
+function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
   const [expanded, setExpanded] = useState(false);
+
   return (
     <div style={{
       background: "#111", border: "1px solid #222", borderRadius: 12,
       overflow: "hidden", transition: "border-color 0.2s",
       borderLeft: `4px solid ${PARTY_COLOR[candidate.party]}`,
     }}
-      onMouseEnter={e => e.currentTarget.style.borderColor = "#333"}
-      onMouseLeave={e => e.currentTarget.style.borderColor = "#222"}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = "#333"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "#222"; }}
     >
       <div style={{ padding: "16px 20px", cursor: "pointer" }} onClick={() => setExpanded(!expanded)}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
@@ -310,9 +378,29 @@ function CandidateCard({ candidate, onAnalyze, analyzing }) {
               <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>GENERAL ELECTION</div>
               <div style={{ color: "#ddd", fontSize: 13 }}>{candidate.generalDate}</div>
             </div>
+            {candidate.opponent && (
+              <div style={{ background: "#0d0d0d", borderRadius: 8, padding: 12 }}>
+                <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>OPPONENT</div>
+                <div style={{ color: "#ddd", fontSize: 13 }}>{candidate.opponent}</div>
+              </div>
+            )}
             <div style={{ background: "#0d0d0d", borderRadius: 8, padding: 12 }}>
               <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>FOSSIL FUEL $</div>
-              <div style={{ color: "#ddd", fontSize: 13 }}>{FOSSIL_ICON[candidate.fossilFuelDonations]} {candidate.fossilFuelDonations}</div>
+              <div style={{ color: "#ddd", fontSize: 13 }}>
+                {FOSSIL_ICON[candidate.fossilFuelDonations]}{" "}
+                {candidate.fossilFuelAmount ?? candidate.fossilFuelDonations}
+              </div>
+              {candidate.fossilFuelCycle && (
+                <div style={{ color: "#555", fontSize: 11, marginTop: 3, fontFamily: "'DM Mono', monospace" }}>
+                  {candidate.fossilFuelCycle}
+                </div>
+              )}
+              {candidate.fossilFuelSource && (
+                <a href={candidate.fossilFuelSource} target="_blank" rel="noopener noreferrer"
+                  style={{ color: "#27ae60", fontSize: 11, fontFamily: "'DM Mono', monospace", textDecoration: "none", display: "block", marginTop: 4 }}>
+                  Source ↗
+                </a>
+              )}
             </div>
           </div>
 
@@ -343,7 +431,7 @@ function CandidateCard({ candidate, onAnalyze, analyzing }) {
             </div>
           )}
 
-          <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+          <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <button
               onClick={() => onAnalyze(candidate)}
               disabled={analyzing === candidate.id}
@@ -358,9 +446,241 @@ function CandidateCard({ candidate, onAnalyze, analyzing }) {
             >
               {analyzing === candidate.id ? "⟳ Analyzing..." : "✦ Run Climate Analysis"}
             </button>
+            <button
+              onClick={e => { e.stopPropagation(); onCompare(candidate); }}
+              style={{
+                background: "#0a1a2a", color: "#5ba3d9",
+                border: "1px solid #5ba3d944",
+                padding: "8px 18px", borderRadius: 6, cursor: "pointer",
+                fontSize: 13, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
+                transition: "all 0.2s"
+              }}
+            >
+              ⊕ Compare with Opponents
+            </button>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
+  const [selectedOpponentId, setSelectedOpponentId] = useState(opponents[0]?.id);
+  const [issue, setIssue] = useState(COMPARE_ISSUES[0].value);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const opponent = opponents.find(o => o.id === selectedOpponentId) || opponents[0];
+  const c1 = primary;
+  const c2 = opponent;
+
+  const cacheKey = c2 ? `${Math.min(c1.id, c2.id)}-${Math.max(c1.id, c2.id)}-${issue}` : null;
+
+  const runComparison = async () => {
+    if (!c2) return;
+    if (cache[cacheKey]) { setResult(cache[cacheKey]); return; }
+    setLoading(true); setError(null); setResult(null);
+    try {
+      const data = await compareCandiates(c1, c2, issue);
+      onCacheUpdate(cacheKey, data);
+      setResult(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const winnerIsC1 = result?.winner === c1.name;
+  const winnerIsC2 = result?.winner === c2?.name;
+  const isTie = result?.winner === "Tie";
+
+  const panelStyle = (isWinner) => ({
+    flex: 1, background: isWinner ? "#0a1a0a" : "#0d0d0d",
+    border: `1px solid ${isWinner ? "#27ae6055" : "#1a1a1a"}`,
+    borderRadius: 10, padding: 20,
+  });
+
+  const scoreColor = s => s >= 70 ? "#27ae60" : s >= 40 ? "#e67e22" : s != null ? "#c0392b" : "#555";
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200,
+      background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-start",
+      justifyContent: "center", overflowY: "auto", padding: "32px 16px",
+    }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: "#0d0d0d", border: "1px solid #222", borderRadius: 16,
+        width: "100%", maxWidth: 900, padding: 32, position: "relative",
+      }}>
+        {/* Close */}
+        <button onClick={onClose} style={{
+          position: "absolute", top: 16, right: 16, background: "#1a1a1a",
+          border: "1px solid #333", color: "#888", borderRadius: 6,
+          padding: "4px 12px", cursor: "pointer", fontSize: 13, fontFamily: "'DM Mono', monospace",
+        }}>Close</button>
+
+        {/* Header */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ color: "#27ae60", fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 2, marginBottom: 10 }}>
+            CANDIDATE COMPARISON
+          </div>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
+            {/* Primary candidate */}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ color: "#555", fontSize: 10, letterSpacing: 1, fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>PRIMARY</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#fff" }}>{c1.name}</div>
+              <div style={{ color: "#888", fontSize: 13, fontFamily: "'DM Mono', monospace", marginTop: 2 }}>
+                {c1.state} · {PARTY_LABEL[c1.party]}
+              </div>
+              <div style={{ marginTop: 6 }}>
+                <span style={{
+                  background: scoreColor(c1.climateScore), color: "#fff",
+                  padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, fontFamily: "monospace"
+                }}>
+                  {c1.climateScore != null ? `${c1.climateScore}/100` : "Not Analyzed"}
+                </span>
+              </div>
+            </div>
+            {/* Opponent selector */}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ color: "#555", fontSize: 10, letterSpacing: 1, fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>OPPONENT</div>
+              {opponents.length > 1 ? (
+                <select
+                  value={selectedOpponentId}
+                  onChange={e => { setSelectedOpponentId(Number(e.target.value)); setResult(null); setError(null); }}
+                  style={{
+                    background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
+                    padding: "6px 10px", borderRadius: 6, fontSize: 14,
+                    fontFamily: "'DM Mono', monospace", cursor: "pointer", outline: "none", marginBottom: 6,
+                  }}
+                >
+                  {opponents.map(o => <option key={o.id} value={o.id}>{o.name} ({PARTY_LABEL[o.party]})</option>)}
+                </select>
+              ) : (
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#fff" }}>{c2?.name}</div>
+              )}
+              {c2 && (
+                <>
+                  <div style={{ color: "#888", fontSize: 13, fontFamily: "'DM Mono', monospace", marginTop: 2 }}>
+                    {c2.state} · {PARTY_LABEL[c2.party]}
+                  </div>
+                  <div style={{ marginTop: 6 }}>
+                    <span style={{
+                      background: scoreColor(c2.climateScore), color: "#fff",
+                      padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, fontFamily: "monospace"
+                    }}>
+                      {c2.climateScore != null ? `${c2.climateScore}/100` : "Not Analyzed"}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Issue selector */}
+        {c2 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+            <span style={{ color: "#555", fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1 }}>ISSUE:</span>
+            <select
+              value={issue}
+              onChange={e => { setIssue(e.target.value); setResult(null); setError(null); }}
+              style={{
+                background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
+                padding: "8px 12px", borderRadius: 6, fontSize: 13,
+                fontFamily: "'DM Mono', monospace", cursor: "pointer", outline: "none",
+              }}
+            >
+              {COMPARE_ISSUES.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+            </select>
+            <button onClick={runComparison} disabled={loading} style={{
+              background: loading ? "#1a3a1a" : "#0f2a0f", color: loading ? "#555" : "#27ae60",
+              border: "1px solid #27ae6044", padding: "8px 18px", borderRadius: 6,
+              cursor: loading ? "not-allowed" : "pointer", fontSize: 13,
+              fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
+            }}>
+              {loading ? "⟳ Running..." : cacheKey && cache[cacheKey] ? "✦ Cached — Re-run" : "✦ Run AI Comparison"}
+            </button>
+            {cacheKey && cache[cacheKey] && !loading && result && (
+              <span style={{ color: "#444", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>From cache</span>
+            )}
+          </div>
+        )}
+
+        {/* Known positions side-by-side */}
+        {c2 && (
+          <div style={{ display: "flex", gap: 12, marginBottom: result || error ? 20 : 0 }}>
+            {[c1, c2].map(c => (
+              <div key={c.id} style={{ flex: 1, background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 8, padding: 14 }}>
+                <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>
+                  {c.name.toUpperCase()} — KNOWN POSITIONS
+                </div>
+                <div style={{ color: "#bbb", fontSize: 13, lineHeight: 1.6 }}>{c.knownPositions}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {!c2 && (
+          <div style={{ background: "#1a1a0a", border: "1px solid #e67e2244", borderRadius: 6, padding: "10px 14px", color: "#e67e22", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
+            No tracked opponents found for this candidate in the same race.
+          </div>
+        )}
+
+        {error && (
+          <div style={{ background: "#1a0a0a", border: "1px solid #c0392b44", borderRadius: 6, padding: "10px 14px", color: "#e74c3c", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
+            {error}
+          </div>
+        )}
+
+        {result && (
+          <div>
+            {/* Winner banner */}
+            <div style={{
+              background: isTie ? "#1a1a0a" : "#0a1a0a",
+              border: `1px solid ${isTie ? "#e67e2255" : "#27ae6055"}`,
+              borderRadius: 8, padding: "12px 16px", marginBottom: 16,
+              display: "flex", alignItems: "center", gap: 10,
+            }}>
+              <span style={{ fontSize: 18 }}>{isTie ? "⚖️" : "🏆"}</span>
+              <div>
+                <div style={{ color: isTie ? "#e67e22" : "#27ae60", fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1 }}>
+                  {isTie ? "TIE" : "STRONGER RECORD"}
+                </div>
+                <div style={{ color: "#ddd", fontSize: 14, marginTop: 2 }}>
+                  <strong>{result.winner}</strong> — {result.winnerReason}
+                </div>
+              </div>
+            </div>
+
+            {/* Side-by-side positions */}
+            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+              <div style={panelStyle(winnerIsC1)}>
+                <div style={{ color: winnerIsC1 ? "#27ae60" : "#555", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
+                  {winnerIsC1 ? "🏆 " : ""}{c1.name.toUpperCase()}
+                </div>
+                <div style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7 }}>{result.candidate1Position}</div>
+              </div>
+              <div style={panelStyle(winnerIsC2)}>
+                <div style={{ color: winnerIsC2 ? "#27ae60" : "#555", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
+                  {winnerIsC2 ? "🏆 " : ""}{c2.name.toUpperCase()}
+                </div>
+                <div style={{ color: "#bbb", fontSize: 13, lineHeight: 1.7 }}>{result.candidate2Position}</div>
+              </div>
+            </div>
+
+            {/* Key difference */}
+            <div style={{ background: "#111", border: "1px solid #222", borderRadius: 8, padding: 14 }}>
+              <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>KEY DIFFERENCE</div>
+              <div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.6 }}>{result.keyDifference}</div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -370,6 +690,11 @@ export default function ClimateTracker() {
   const [analyzing, setAnalyzing] = useState(null);
   const [filter, setFilter] = useState({ party: "all", state: "", competitiveness: "all", analyzed: "all", issue: "all" });
   const [globalError, setGlobalError] = useState(null);
+  const [compareCandidate, setCompareCandidate] = useState(null);
+  const [compareCache, setCompareCache] = useState({});
+
+  const getOpponents = (candidate) =>
+    candidates.filter(c => c.state === candidate.state && c.office === candidate.office && c.id !== candidate.id);
 
   const states = [...new Set(candidates.map(c => c.state))].sort();
   const competitive = [...new Set(candidates.map(c => c.raceCompetitiveness))];
@@ -528,7 +853,8 @@ export default function ClimateTracker() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filtered.map(c => (
-            <CandidateCard key={c.id} candidate={c} onAnalyze={analyzeCandidate} analyzing={analyzing} />
+            <CandidateCard key={c.id} candidate={c} onAnalyze={analyzeCandidate} analyzing={analyzing}
+              onCompare={setCompareCandidate} />
           ))}
         </div>
 
@@ -544,6 +870,16 @@ export default function ClimateTracker() {
           Candidate data sourced from Wikipedia, Ballotpedia, and news reporting (as of March 2026). AI analysis powered by Claude (Anthropic). Scores reflect climate policy alignment with scientific consensus — not party affiliation. Race competitiveness ratings from Cook Political Report / Sabato&apos;s Crystal Ball. Fossil fuel donation levels are indicative estimates pending FEC data integration. This tracker is for informational purposes; always verify with primary sources.
         </div>
       </div>
+
+      {compareCandidate && (
+        <CompareModal
+          primary={compareCandidate}
+          opponents={getOpponents(compareCandidate)}
+          onClose={() => setCompareCandidate(null)}
+          cache={compareCache}
+          onCacheUpdate={(key, data) => setCompareCache(prev => ({ ...prev, [key]: data }))}
+        />
+      )}
     </div>
   );
 }
