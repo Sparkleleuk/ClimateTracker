@@ -781,8 +781,8 @@ export default function ClimateTracker() {
             </div>
           </div>
 
-          {/* Filters */}
-          <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          {/* Row 1: Filter dropdowns */}
+          <div className="filter-row">
             <select style={selectStyle} value={filter.issue} onChange={e => setFilter(f => ({ ...f, issue: e.target.value }))}>
               <option value="all">All Issues</option>
               {ISSUE_FILTERS.map(group => (
@@ -812,33 +812,34 @@ export default function ClimateTracker() {
               <option value="yes">Analyzed Only</option>
               <option value="no">Unanalyzed Only</option>
             </select>
-            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-              <button
-                onClick={analyzeAll}
-                disabled={analyzing !== null}
-                style={{
-                  background: "#0f2a0f", color: "#27ae60", border: "1px solid #27ae6055",
-                  padding: "8px 16px", borderRadius: 6, cursor: analyzing ? "not-allowed" : "pointer",
-                  fontSize: 12, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5
-                }}
-              >
-                ✦ Analyze All Visible ({filtered.filter(c => c.climateScore === null).length})
-              </button>
-            </div>
           </div>
 
-          <div style={{ marginTop: 10 }}>
+          {/* Row 2: Search + Analyze All */}
+          <div className="filter-actions-row">
             <input
               type="text"
               placeholder="Search by name..."
               value={filter.search}
               onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
+              className="filter-search"
               style={{
                 background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
                 padding: "8px 12px", borderRadius: 6, fontSize: 13,
-                fontFamily: "'DM Mono', monospace", outline: "none", width: 240,
+                fontFamily: "'DM Mono', monospace", outline: "none",
               }}
             />
+            <button
+              className="filter-analyze"
+              onClick={analyzeAll}
+              disabled={analyzing !== null}
+              style={{
+                background: "#0f2a0f", color: "#27ae60", border: "1px solid #27ae6055",
+                padding: "8px 16px", borderRadius: 6, cursor: analyzing ? "not-allowed" : "pointer",
+                fontSize: 12, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, whiteSpace: "nowrap",
+              }}
+            >
+              ✦ Analyze All Visible ({filtered.filter(c => c.climateScore === null).length})
+            </button>
           </div>
 
           {globalError && (

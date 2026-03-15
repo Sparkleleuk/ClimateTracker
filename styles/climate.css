@@ -7,3 +7,56 @@
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
 
 select option { background: #111; }
+
+/* Filter toolbar */
+.filter-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.filter-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.filter-search {
+  flex: 0 0 40%;
+}
+
+.filter-analyze {
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filter-row select:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .filter-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-search {
+    flex: unset;
+    width: 100%;
+  }
+
+  .filter-analyze {
+    margin-left: 0;
+  }
+}
