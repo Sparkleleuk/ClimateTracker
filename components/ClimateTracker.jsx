@@ -783,17 +783,6 @@ export default function ClimateTracker() {
 
           {/* Filters */}
           <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <input
-              type="text"
-              placeholder="Search by name..."
-              value={filter.search}
-              onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
-              style={{
-                background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
-                padding: "8px 12px", borderRadius: 6, fontSize: 13,
-                fontFamily: "'DM Mono', monospace", outline: "none", width: 180,
-              }}
-            />
             <select style={selectStyle} value={filter.issue} onChange={e => setFilter(f => ({ ...f, issue: e.target.value }))}>
               <option value="all">All Issues</option>
               {ISSUE_FILTERS.map(group => (
@@ -836,6 +825,20 @@ export default function ClimateTracker() {
                 ✦ Analyze All Visible ({filtered.filter(c => c.climateScore === null).length})
               </button>
             </div>
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            <input
+              type="text"
+              placeholder="Search by name..."
+              value={filter.search}
+              onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
+              style={{
+                background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
+                padding: "8px 12px", borderRadius: 6, fontSize: 13,
+                fontFamily: "'DM Mono', monospace", outline: "none", width: 240,
+              }}
+            />
           </div>
 
           {globalError && (
