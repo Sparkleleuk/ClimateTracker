@@ -688,7 +688,7 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
 export default function ClimateTracker() {
   const [candidates, setCandidates] = useState(CANDIDATES);
   const [analyzing, setAnalyzing] = useState(null);
-  const [filter, setFilter] = useState({ party: "all", state: "", competitiveness: "all", analyzed: "all", issue: "all" });
+  const [filter, setFilter] = useState({ party: "all", state: "", competitiveness: "all", analyzed: "all", issue: "all", search: "" });
   const [globalError, setGlobalError] = useState(null);
   const [compareCandidate, setCompareCandidate] = useState(null);
   const [compareCache, setCompareCache] = useState({});
@@ -706,6 +706,7 @@ export default function ClimateTracker() {
     if (filter.analyzed === "yes" && c.climateScore === null) return false;
     if (filter.analyzed === "no" && c.climateScore !== null) return false;
     if (filter.issue !== "all" && !c.issues?.includes(filter.issue)) return false;
+    if (filter.search && !c.name.toLowerCase().includes(filter.search.toLowerCase())) return false;
     return true;
   }).sort((a, b) => {
     const lastName = name => name.split(" ").at(-1);
@@ -782,6 +783,17 @@ export default function ClimateTracker() {
 
           {/* Filters */}
           <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              type="text"
+              placeholder="Search by name..."
+              value={filter.search}
+              onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
+              style={{
+                background: "#111", color: "#ccc", border: "1px solid #2a2a2a",
+                padding: "8px 12px", borderRadius: 6, fontSize: 13,
+                fontFamily: "'DM Mono', monospace", outline: "none", width: 180,
+              }}
+            />
             <select style={selectStyle} value={filter.issue} onChange={e => setFilter(f => ({ ...f, issue: e.target.value }))}>
               <option value="all">All Issues</option>
               {ISSUE_FILTERS.map(group => (
