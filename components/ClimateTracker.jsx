@@ -303,6 +303,72 @@ const COMPARE_ISSUES = [
   { value: "Climate Resilience", label: "Climate Resilience" },
 ];
 
+const STATUS_STYLE = {
+  nominee:   { bg: "#0a2a0a", color: "#27ae60", border: "#27ae6055", label: "NOMINEE" },
+  withdrew:  { bg: "#1a1a1a", color: "#666",    border: "#44444455", label: "WITHDREW" },
+  eliminated:{ bg: "#1a1a1a", color: "#666",    border: "#44444455", label: "ELIMINATED" },
+  declared:  { bg: "#0a1a2a", color: "#5ba3d9", border: "#5ba3d944", label: "DECLARED" },
+}
+
+// Today's date string for filing deadline comparison (computed once)
+const TODAY = new Date().toISOString().slice(0, 10);
+
+const FILING_DEADLINES = {
+  Alaska:          "2026-06-01",
+  Florida:         "2026-05-08",
+  Georgia:         "2026-03-06",
+  Iowa:            "2026-03-13",
+  Louisiana:       "2026-08-14",
+  Maine:           "2026-03-15",
+  Nebraska:        "2026-03-02",
+  "New Hampshire": "2026-06-12",
+  "New Jersey":    "2026-04-06",
+  "New Mexico":    "2026-03-10",
+  "North Carolina":"2025-12-19",
+  Ohio:            "2026-02-20",
+  Texas:           "2025-12-09",
+  Virginia:        "2026-03-26",
+};
+
+function filingOpen(state) {
+  const dl = FILING_DEADLINES[state];
+  return dl ? TODAY <= dl : false;
+}
+
+function StatusBadge({ candidate }) {
+  const status = candidate.candidacyStatus ?? "declared";
+  if (status === "nominee") {
+    const s = STATUS_STYLE.nominee;
+    return (
+      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`,
+        padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700,
+        fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>
+        ★ {s.label}
+      </span>
+    );
+  }
+  if (status === "withdrew" || status === "eliminated") {
+    const s = STATUS_STYLE[status];
+    return (
+      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`,
+        padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700,
+        fontFamily: "'DM Mono', monospace", letterSpacing: 1, textDecoration: "line-through" }}>
+        {s.label}
+      </span>
+    );
+  }
+  if (status === "declared" && filingOpen(candidate.state)) {
+    return (
+      <span style={{ background: "#1a1500", color: "#e6b800", border: "1px solid #e6b80044",
+        padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700,
+        fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>
+        FILING OPEN
+      </span>
+    );
+  }
+  return null; // no badge for plain declared + filing closed
+}
+
 function ScoreBadge({ score }) {
   if (score === null) return (
     <span style={{ background: "var(--bg-badge-na)", color: "var(--badge-na-color)", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontFamily: "monospace" }}>
@@ -347,6 +413,7 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
                   {candidate.incumbentStatus === "incumbent (appointed)" ? "Appointed" : "Incumbent"}
                 </span>
               )}
+              <StatusBadge candidate={candidate} />
             </div>
             <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4, fontFamily: "'DM Mono', monospace" }}>
               {candidate.state} · {candidate.office}
@@ -686,14 +753,44 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
   );
 }
 
-export default function ClimateTracker() {
-  const [candidates, setCandidates] = useState(CANDIDATES);
+export default function ClimateTracker({ initialCandidates }) {
+  const [candidates, setCandidates] = useState(initialCandidates ?? CANDIDATES);
   const [analyzing, setAnalyzing] = useState(null);
   const [filter, setFilter] = useState({ party: "all", state: "", competitiveness: "all", analyzed: "all", issue: "all", search: "" });
   const [globalError, setGlobalError] = useState(null);
   const [compareCandidate, setCompareCandidate] = useState(null);
   const [compareCache, setCompareCache] = useState({});
   const [dark, setDark] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncToast, setSyncToast] = useState(null);
+
+  // Show admin controls when URL contains ?admin=true
+  const isAdmin = typeof window !== "undefined"
+    && new URLSearchParams(window.location.search).get("admin") === "true";
+
+  const runSync = async () => {
+    const secret = prompt("Enter sync secret:");
+    if (!secret) return;
+    setSyncing(true);
+    setSyncToast(null);
+    try {
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "x-sync-secret": secret },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Sync failed");
+      setSyncToast({ ok: true, message: data.message || "Sync complete" });
+      // Refresh candidate list after sync
+      const updated = await fetch("/api/candidates").then(r => r.json());
+      if (updated.candidates) setCandidates(updated.candidates);
+    } catch (err) {
+      setSyncToast({ ok: false, message: err.message });
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncToast(null), 6000);
+    }
+  };
 
   const getOpponents = (candidate) =>
     candidates.filter(c => c.state === candidate.state && c.office === candidate.office && c.id !== candidate.id);
@@ -754,6 +851,19 @@ export default function ClimateTracker() {
 
   return (
     <div data-theme={dark ? "dark" : "light"} style={{ minHeight: "100vh", background: "var(--bg-page)", color: "var(--text-1)", fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Sync toast */}
+      {syncToast && (
+        <div style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 300,
+          background: syncToast.ok ? "var(--bg-analysis)" : "var(--bg-error)",
+          border: `1px solid ${syncToast.ok ? "var(--border-analysis)" : "var(--border-error)"}`,
+          color: syncToast.ok ? "var(--accent)" : "var(--error-color)",
+          borderRadius: 8, padding: "12px 18px", fontSize: 13,
+          fontFamily: "'DM Mono', monospace", maxWidth: 360, boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+        }}>
+          {syncToast.ok ? "✦ " : "✗ "}{syncToast.message}
+        </div>
+      )}
       {/* Header */}
       <div style={{ borderBottom: "1px solid var(--border-mid)", padding: "24px 32px", background: "var(--bg-page)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -791,6 +901,21 @@ export default function ClimateTracker() {
               >
                 {dark ? "☀️" : "🌙"}
               </button>
+              {isAdmin && (
+                <button
+                  onClick={runSync}
+                  disabled={syncing}
+                  title="Sync candidates from Ballotpedia (admin only)"
+                  style={{
+                    background: "var(--toggle-bg)", border: "1px solid var(--toggle-border)",
+                    color: syncing ? "var(--text-dim)" : "var(--accent)", borderRadius: 8,
+                    padding: "8px 12px", cursor: syncing ? "not-allowed" : "pointer",
+                    fontSize: 13, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, marginLeft: 4,
+                  }}
+                >
+                  {syncing ? "⟳ Syncing…" : "↻ Sync"}
+                </button>
+              )}
             </div>
           </div>
 
