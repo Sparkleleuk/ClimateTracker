@@ -1,4 +1,4 @@
-import { scrapeBallotpedia2026Senate } from '../../lib/scrapers/ballotpedia.js'
+import { scrapeBallotpedia2026Senate, scrapeBallotpedia2026Governors } from '../../lib/scrapers/ballotpedia.js'
 import { syncCandidates } from '../../lib/sync/candidateSync.js'
 
 export default async function handler(req, res) {
@@ -28,12 +28,17 @@ export default async function handler(req, res) {
   console.log(`[sync] Starting sync at ${startedAt}`)
 
   try {
-    const scraped = await scrapeBallotpedia2026Senate()
+    const [senateScraped, govScraped] = await Promise.all([
+      scrapeBallotpedia2026Senate(),
+      scrapeBallotpedia2026Governors(),
+    ])
+
+    const scraped = [...senateScraped, ...govScraped]
 
     if (scraped.length === 0) {
       return res.status(200).json({
         ok: true,
-        message: 'Scraper returned 0 candidates — Ballotpedia may have changed its HTML structure. No database changes were made.',
+        message: 'Scrapers returned 0 candidates — Ballotpedia may have changed its HTML structure. No database changes were made.',
         startedAt,
         scrapedCount: 0,
         summary: null,
@@ -46,6 +51,8 @@ export default async function handler(req, res) {
       ok: true,
       startedAt,
       scrapedCount: scraped.length,
+      senateCount: senateScraped.length,
+      govCount: govScraped.length,
       summary: {
         added:      summary.added,
         updated:    summary.updated,

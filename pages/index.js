@@ -32,6 +32,7 @@ export async function getServerSideProps() {
       raceCompetitiveness: row.race_competitiveness,
       primaryDate:         row.primary_date,
       generalDate:         row.general_date,
+      officeType:          row.office_type ?? 'us_senate',
       candidacyStatus:     row.candidacy_status,
       knownPositions:      row.known_positions,
       fossilFuelDonations: row.fossil_fuel_donations,

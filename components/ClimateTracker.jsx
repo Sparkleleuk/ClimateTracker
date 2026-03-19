@@ -408,6 +408,11 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
               }}>
                 {PARTY_LABEL[candidate.party]}
               </span>
+              {candidate.officeType === "governor" && (
+                <span style={{ background: "#1a0a2a", color: "#a87fd4", border: "1px solid #a87fd444", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>
+                  GOV
+                </span>
+              )}
               {candidate.incumbentStatus.includes("incumbent") && (
                 <span style={{ background: "var(--bg-elevated)", color: "var(--text-5)", border: "1px solid var(--border-strong)", padding: "2px 8px", borderRadius: 4, fontSize: 11 }}>
                   {candidate.incumbentStatus === "incumbent (appointed)" ? "Appointed" : "Incumbent"}
@@ -756,7 +761,7 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
 export default function ClimateTracker({ initialCandidates }) {
   const [candidates, setCandidates] = useState(initialCandidates ?? CANDIDATES);
   const [analyzing, setAnalyzing] = useState(null);
-  const [filter, setFilter] = useState({ party: "all", state: "", competitiveness: "all", analyzed: "all", issue: "all", search: "" });
+  const [filter, setFilter] = useState({ party: "all", state: "", competitiveness: "all", analyzed: "all", issue: "all", search: "", officeType: "all" });
   const [globalError, setGlobalError] = useState(null);
   const [compareCandidate, setCompareCandidate] = useState(null);
   const [compareCache, setCompareCache] = useState({});
@@ -799,6 +804,7 @@ export default function ClimateTracker({ initialCandidates }) {
   const competitive = [...new Set(candidates.map(c => c.raceCompetitiveness))];
 
   const filtered = candidates.filter(c => {
+    if (filter.officeType !== "all" && (c.officeType ?? "us_senate") !== filter.officeType) return false;
     if (filter.party !== "all" && c.party !== filter.party) return false;
     if (filter.state && c.state !== filter.state) return false;
     if (filter.competitiveness !== "all" && c.raceCompetitiveness !== filter.competitiveness) return false;
@@ -838,6 +844,10 @@ export default function ClimateTracker({ initialCandidates }) {
     }
   };
 
+  const senateCandidates = candidates.filter(c => (c.officeType ?? "us_senate") !== "governor");
+  const govCandidates = candidates.filter(c => c.officeType === "governor");
+  const senateAnalyzed = senateCandidates.filter(c => c.climateScore !== null).length;
+  const govAnalyzed = govCandidates.filter(c => c.climateScore !== null).length;
   const analyzedCount = candidates.filter(c => c.climateScore !== null).length;
   const avgScore = analyzedCount > 0
     ? Math.round(candidates.filter(c => c.climateScore !== null).reduce((a, c) => a + c.climateScore, 0) / analyzedCount)
@@ -881,13 +891,14 @@ export default function ClimateTracker({ initialCandidates }) {
             </div>
             <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
               {[
-                { label: "Candidates", value: candidates.length },
-                { label: "Analyzed", value: analyzedCount },
-                { label: "Avg Score", value: avgScore !== null ? `${avgScore}/100` : "—" },
-              ].map(({ label, value }) => (
+                { label: "Senate", value: senateCandidates.length, sub: `${senateAnalyzed} analyzed` },
+                { label: "Governor", value: govCandidates.length, sub: `${govAnalyzed} analyzed` },
+                { label: "Avg Score", value: avgScore !== null ? `${avgScore}/100` : "—", sub: `${analyzedCount} total analyzed` },
+              ].map(({ label, value, sub }) => (
                 <div key={label} style={{ textAlign: "right" }}>
                   <div style={{ color: "var(--accent)", fontFamily: "'DM Mono', monospace", fontSize: 22, fontWeight: 500 }}>{value}</div>
                   <div style={{ color: "var(--text-deep)", fontSize: 11, letterSpacing: 1 }}>{label}</div>
+                  {sub && <div style={{ color: "var(--text-ghost)", fontSize: 10, letterSpacing: 0.5 }}>{sub}</div>}
                 </div>
               ))}
               <button
@@ -921,6 +932,11 @@ export default function ClimateTracker({ initialCandidates }) {
 
           {/* Row 1: Filter dropdowns */}
           <div className="filter-row">
+            <select style={selectStyle} value={filter.officeType} onChange={e => setFilter(f => ({ ...f, officeType: e.target.value }))}>
+              <option value="all">All Offices</option>
+              <option value="us_senate">U.S. Senate</option>
+              <option value="governor">Governor</option>
+            </select>
             <select style={selectStyle} value={filter.issue} onChange={e => setFilter(f => ({ ...f, issue: e.target.value }))}>
               <option value="all">All Issues</option>
               {ISSUE_FILTERS.map(group => (

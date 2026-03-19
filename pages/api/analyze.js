@@ -72,6 +72,47 @@ ${ISSUE_TAG_LIST}
 Be factual, cite their state's specific climate vulnerabilities, and note data gaps where the record is thin. Be nonpartisan — score based on climate science alignment, not party affiliation.`
 }
 
+function buildGovernorPrompt(candidate) {
+  return `You are a nonpartisan climate policy analyst. Analyze this US gubernatorial candidate's environmental record and state-level climate positions.
+
+Candidate: ${candidate.name}
+Party: ${PARTY_LABEL[candidate.party]}
+State: ${candidate.state}
+Office: Governor of ${candidate.state}
+Race Competitiveness: ${candidate.raceCompetitiveness}
+Known Positions: ${candidate.knownPositions}
+Fossil Fuel Donation Level: ${candidate.fossilFuelDonations}
+
+Governors have distinct state-level climate powers. Focus your analysis on:
+- State renewable energy standards and utility regulation authority
+- State climate targets and executive orders (e.g., 100% clean electricity mandates)
+- State land use, natural resource management, and public lands oversight
+- State building codes and appliance efficiency standards
+- Disaster preparedness, climate resilience, and emergency response
+- Environmental justice at the state level
+- The governor's relationship with or opposition to federal climate policy
+- State-specific climate vulnerabilities (wildfire, flooding, drought, sea level rise, heat)
+
+Provide:
+1. CLIMATE SCORE (0-100): Score their climate record/proposals for a governor's office. 0=actively blocking climate action, 50=mixed/status quo, 100=ambitious state climate leader. State the number clearly as "SCORE: XX/100"
+
+2. POLICY ANALYSIS (3-4 sentences): What do we know about their state climate record or proposals? What state-level powers would they use (or not use)?
+
+3. STRENGTHS: 1-2 climate policy strengths relevant to a governor's powers (or "None identified")
+
+4. CONCERNS: 1-2 climate policy concerns or gaps at the state level
+
+5. KEY ISSUES TO WATCH: What state-level climate topics are most relevant for ${candidate.state} under this candidate's potential governorship?
+
+6. ISSUE TAGS: From the list below, select all tags that are relevant to this candidate's record or positions. Output them as a comma-separated list on a single line, exactly as: "TAGS: tag-value-1, tag-value-2, ..."
+Only include tags where the candidate has a clear, demonstrable position or record. Do not tag issues where the record is absent or entirely unknown.
+
+Available tags:
+${ISSUE_TAG_LIST}
+
+Be factual, cite ${candidate.state}'s specific climate vulnerabilities and state policy context, and note data gaps where the record is thin. Be nonpartisan — score based on climate science alignment, not party affiliation.`
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -83,10 +124,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    const prompt = candidate.officeType === 'governor'
+      ? buildGovernorPrompt(candidate)
+      : buildPrompt(candidate)
+
     const stream = client.messages.stream({
       model: 'claude-opus-4-6',
       max_tokens: 1200,
-      messages: [{ role: 'user', content: buildPrompt(candidate) }],
+      messages: [{ role: 'user', content: prompt }],
     })
 
     const message = await stream.finalMessage()
