@@ -147,6 +147,20 @@ export default async function handler(req, res) {
       ? tagsMatch[1].split(',').map(t => t.trim()).filter(t => ISSUE_TAGS.some(it => it.value === t))
       : []
 
+    // Persist to Supabase if candidate has a DB id
+    if (candidate.id) {
+      try {
+        const { supabase } = await import('../../lib/supabaseClient.js')
+        await supabase.from('candidates').update({
+          climate_score:    score,
+          climate_analysis: text,
+          issue_tags:       issues,
+        }).eq('id', candidate.id)
+      } catch (dbErr) {
+        console.error('Failed to persist analysis to Supabase:', dbErr)
+      }
+    }
+
     return res.status(200).json({ text, score, issues })
   } catch (err) {
     console.error('Anthropic API error:', err)

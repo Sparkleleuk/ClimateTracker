@@ -41,9 +41,9 @@ export async function getServerSideProps() {
       fossilFuelSource:    row.fossil_fuel_source,
       opponent:            row.opponent,
       ballotpediaUrl:      row.ballotpedia_url,
-      climateScore:        null,
-      climateAnalysis:     null,
-      issues:              [],
+      climateScore:        row.climate_score ?? null,
+      climateAnalysis:     row.climate_analysis ?? null,
+      issues:              row.issue_tags ?? [],
     }))
 
     return { props: { initialCandidates: candidates } }

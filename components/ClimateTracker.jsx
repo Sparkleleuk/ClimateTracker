@@ -930,13 +930,24 @@ export default function ClimateTracker({ initialCandidates }) {
             </div>
           </div>
 
+          {/* Office type tabs */}
+          <div style={{ display: "flex", gap: 0, marginTop: 20, borderBottom: "1px solid var(--border)" }}>
+            {[["all", "All Offices"], ["us_senate", "U.S. Senate"], ["governor", "Governor"]].map(([val, label]) => {
+              const active = filter.officeType === val;
+              return (
+                <button key={val} onClick={() => setFilter(f => ({ ...f, officeType: val }))} style={{
+                  padding: "8px 20px", background: "none", border: "none", borderBottom: active ? "2px solid var(--accent)" : "2px solid transparent",
+                  color: active ? "var(--accent)" : "var(--text-muted)", fontFamily: "'DM Mono', monospace", fontSize: 12,
+                  fontWeight: active ? 600 : 400, letterSpacing: 0.5, cursor: "pointer", marginBottom: -1, transition: "color 0.15s",
+                }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Row 1: Filter dropdowns */}
           <div className="filter-row">
-            <select style={selectStyle} value={filter.officeType} onChange={e => setFilter(f => ({ ...f, officeType: e.target.value }))}>
-              <option value="all">All Offices</option>
-              <option value="us_senate">U.S. Senate</option>
-              <option value="governor">Governor</option>
-            </select>
             <select style={selectStyle} value={filter.issue} onChange={e => setFilter(f => ({ ...f, issue: e.target.value }))}>
               <option value="all">All Issues</option>
               {ISSUE_FILTERS.map(group => (

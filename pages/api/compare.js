@@ -40,7 +40,25 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'candidate1, candidate2, and issue are required' })
   }
 
+  const id1 = Math.min(candidate1.id, candidate2.id)
+  const id2 = Math.max(candidate1.id, candidate2.id)
+
   try {
+    const { supabase } = await import('../../lib/supabaseClient.js')
+
+    // Return cached comparison if it exists
+    const { data: existing } = await supabase
+      .from('comparisons')
+      .select('result')
+      .eq('candidate1_id', id1)
+      .eq('candidate2_id', id2)
+      .eq('issue', issue)
+      .single()
+
+    if (existing?.result) {
+      return res.status(200).json(existing.result)
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -67,11 +85,18 @@ export default async function handler(req, res) {
     try {
       comparison = JSON.parse(text)
     } catch {
-      // Try to extract JSON if there's surrounding text
       const match = text.match(/\{[\s\S]*\}/)
       if (!match) throw new Error('Could not parse response as JSON')
       comparison = JSON.parse(match[0])
     }
+
+    // Persist to Supabase
+    await supabase.from('comparisons').upsert({
+      candidate1_id: id1,
+      candidate2_id: id2,
+      issue,
+      result: comparison,
+    })
 
     return res.status(200).json(comparison)
   } catch (err) {
