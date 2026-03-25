@@ -761,6 +761,7 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate }) {
 export default function ClimateTracker({ initialCandidates }) {
   const [candidates, setCandidates] = useState(initialCandidates ?? CANDIDATES);
   const [analyzing, setAnalyzing] = useState(null);
+  const [analyzingAll, setAnalyzingAll] = useState(false);
   const [filter, setFilter] = useState({ party: "all", state: "", competitiveness: "all", analyzed: "all", issue: "all", search: "", officeType: "all" });
   const [globalError, setGlobalError] = useState(null);
   const [compareCandidate, setCompareCandidate] = useState(null);
@@ -837,11 +838,17 @@ export default function ClimateTracker({ initialCandidates }) {
   };
 
   const analyzeAll = async () => {
-    const unanalyzed = filtered.filter(c => c.climateScore === null);
+    const unanalyzed = candidates.filter(c => {
+      if (filter.officeType !== "all" && (c.officeType ?? "us_senate") !== filter.officeType) return false;
+      return c.climateScore === null;
+    });
+    if (unanalyzed.length === 0) return;
+    setAnalyzingAll(true);
     for (const c of unanalyzed) {
       await analyzeCandidate(c);
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise(r => setTimeout(r, 500));
     }
+    setAnalyzingAll(false);
   };
 
   const senateCandidates = candidates.filter(c => (c.officeType ?? "us_senate") !== "governor");
@@ -996,14 +1003,14 @@ export default function ClimateTracker({ initialCandidates }) {
             <button
               className="filter-analyze"
               onClick={analyzeAll}
-              disabled={analyzing !== null}
+              disabled={analyzingAll || analyzing !== null}
               style={{
-                background: "var(--bg-btn-analyze)", color: "var(--btn-analyze-color)", border: "1px solid var(--accent-btn-border)",
-                padding: "8px 16px", borderRadius: 6, cursor: analyzing ? "not-allowed" : "pointer",
+                background: "var(--bg-btn-analyze)", color: analyzingAll ? "var(--btn-analyze-dis)" : "var(--btn-analyze-color)", border: "1px solid var(--accent-btn-border)",
+                padding: "8px 16px", borderRadius: 6, cursor: (analyzingAll || analyzing) ? "not-allowed" : "pointer",
                 fontSize: 12, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, whiteSpace: "nowrap",
               }}
             >
-              ✦ Analyze All Visible ({filtered.filter(c => c.climateScore === null).length})
+              {analyzingAll ? `⟳ Analyzing...` : `✦ Analyze All Visible (${filtered.filter(c => c.climateScore === null).length})`}
             </button>
           </div>
 

@@ -43,10 +43,9 @@ export default async function handler(req, res) {
     fossilFuelSource:     row.fossil_fuel_source,
     opponent:             row.opponent,
     ballotpediaUrl:       row.ballotpedia_url,
-    // AI analysis fields — not stored in DB, start null on every load
-    climateScore:         null,
-    climateAnalysis:      null,
-    issues:               [],
+    climateScore:         row.climate_score ?? null,
+    climateAnalysis:      row.climate_analysis ?? null,
+    issues:               row.issue_tags ?? [],
   }))
 
   res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600')

@@ -5,12 +5,18 @@ function buildPrompt(c1, c2, issue) {
     `Name: ${c.name}`,
     `Party: ${PARTY_LABEL[c.party]}`,
     `State: ${c.state}`,
+    `Office: ${c.office}`,
     `Known Positions: ${c.knownPositions}`,
     c.climateAnalysis ? `AI Analysis: ${c.climateAnalysis.slice(0, 600)}...` : '',
     c.climateScore != null ? `Overall Climate Score: ${c.climateScore}/100` : '',
   ].filter(Boolean).join('\n')
 
-  return `You are a nonpartisan climate policy analyst. Compare these two US Senate candidates specifically on the issue of "${issue}".
+  const isGov = c1.officeType === 'governor' || c2.officeType === 'governor'
+  const officeContext = isGov
+    ? `gubernatorial candidates (focus on state-level climate powers: utility regulation, clean energy standards, executive orders, land use, building codes, disaster resilience)`
+    : `US Senate candidates (focus on federal climate legislation, regulation, and oversight)`
+
+  return `You are a nonpartisan climate policy analyst. Compare these two ${officeContext} specifically on the issue of "${issue}".
 
 CANDIDATE 1:
 ${fmt(c1)}
