@@ -1,4 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { TIERS } from '../../lib/constants/tiers.js'
+import { buildHouseTier1Prompt, buildHouseTier2Prompt } from '../../lib/prompts/housePrompts.js'
+import { computeAlgorithmicScore } from '../../lib/scoring/algorithmicScore.js'
+import { logApiCall } from '../../lib/utils/costTracker.js'
 
 const client = new Anthropic()
 
@@ -118,19 +122,120 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { candidate } = req.body
+  const { candidate, forceFullAnalysis } = req.body
   if (!candidate) {
     return res.status(400).json({ error: 'candidate is required' })
   }
 
+  const isHouse = candidate.officeType === 'us_house'
+  const candidateTier = candidate.tier ?? null
+
+  // --- Tier 3: algorithmic score (no API call) ---
+  if (isHouse && candidateTier === 3 && !forceFullAnalysis) {
+    const result = computeAlgorithmicScore(candidate)
+
+    // Persist to Supabase if candidate has a DB id
+    if (candidate.id) {
+      try {
+        const { supabase } = await import('../../lib/supabaseClient.js')
+        await supabase.from('candidates').update({
+          climate_score:    result.score,
+          climate_analysis: result.summary,
+          issue_tags:       [],
+        }).eq('id', candidate.id)
+      } catch (dbErr) {
+        console.error('Failed to persist algorithmic score to Supabase:', dbErr)
+      }
+    }
+
+    return res.status(200).json({
+      text:   result.summary,
+      score:  result.score,
+      issues: [],
+      scoreSource: result.scoreSource,
+      disclaimer:  result.disclaimer,
+      stances:     result.stances,
+      confidence:  result.confidence,
+    })
+  }
+
+  // --- Tier 2: compressed House prompt, parse JSON response ---
+  if (isHouse && candidateTier === 2 && !forceFullAnalysis) {
+    try {
+      const prompt = buildHouseTier2Prompt(candidate)
+
+      const stream = client.messages.stream({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: TIERS.TIER_2.maxTokensOutput,
+        messages: [{ role: 'user', content: prompt }],
+      })
+
+      const message = await stream.finalMessage()
+      const rawText = message.content
+        .map(b => (b.type === 'text' ? b.text : ''))
+        .join('')
+
+      // Parse the JSON response
+      let parsed = {}
+      try {
+        // Strip any accidental markdown fences
+        const cleaned = rawText.replace(/^```json?\s*/i, '').replace(/\s*```$/i, '').trim()
+        parsed = JSON.parse(cleaned)
+      } catch {
+        console.warn('[analyze] Tier 2 JSON parse failed, returning raw text')
+        parsed = { score: null, summary: rawText }
+      }
+
+      const score = typeof parsed.score === 'number' ? parsed.score : null
+      const text  = parsed.summary ?? rawText
+
+      // Log cost
+      await logApiCall({
+        candidateId:    candidate.id,
+        tier:           2,
+        tokensInput:    message.usage?.input_tokens ?? 0,
+        tokensOutput:   message.usage?.output_tokens ?? 0,
+        model:          'claude-haiku-4-5-20251001',
+        batchOrRealtime: 'realtime',
+      })
+
+      // Persist to Supabase
+      if (candidate.id) {
+        try {
+          const { supabase } = await import('../../lib/supabaseClient.js')
+          await supabase.from('candidates').update({
+            climate_score:    score,
+            climate_analysis: text,
+            issue_tags:       [],
+          }).eq('id', candidate.id)
+        } catch (dbErr) {
+          console.error('Failed to persist Tier 2 analysis to Supabase:', dbErr)
+        }
+      }
+
+      return res.status(200).json({ text, score, issues: [] })
+    } catch (err) {
+      console.error('Anthropic API error (Tier 2):', err)
+      const status = err.status ?? 500
+      return res.status(status).json({ error: err.message ?? 'Analysis failed' })
+    }
+  }
+
+  // --- Tier 1 / Senate / Governor / forceFullAnalysis: full prompt ---
   try {
-    const prompt = candidate.officeType === 'governor'
-      ? buildGovernorPrompt(candidate)
-      : buildPrompt(candidate)
+    let prompt
+    if (isHouse) {
+      // Tier 1 House or forceFullAnalysis upgrade
+      prompt = buildHouseTier1Prompt(candidate)
+    } else if (candidate.officeType === 'governor') {
+      prompt = buildGovernorPrompt(candidate)
+    } else {
+      prompt = buildPrompt(candidate)
+    }
 
     const stream = client.messages.stream({
       model: 'claude-opus-4-6',
-      max_tokens: 1200,
+      max_tokens: TIERS.TIER_1.maxTokensOutput,
       messages: [{ role: 'user', content: prompt }],
     })
 
@@ -146,6 +251,16 @@ export default async function handler(req, res) {
     const issues = tagsMatch
       ? tagsMatch[1].split(',').map(t => t.trim()).filter(t => ISSUE_TAGS.some(it => it.value === t))
       : []
+
+    // Log cost
+    await logApiCall({
+      candidateId:    candidate.id,
+      tier:           isHouse ? (forceFullAnalysis ? 'upgrade' : 1) : null,
+      tokensInput:    message.usage?.input_tokens ?? 0,
+      tokensOutput:   message.usage?.output_tokens ?? 0,
+      model:          'claude-opus-4-6',
+      batchOrRealtime: 'realtime',
+    })
 
     // Persist to Supabase if candidate has a DB id
     if (candidate.id) {

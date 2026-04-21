@@ -413,7 +413,17 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
                   GOV
                 </span>
               )}
-              {candidate.incumbentStatus.includes("incumbent") && (
+              {candidate.officeType === "us_house" && (
+                <span style={{ background: "#0a1a2e", color: "#4a90d9", border: "1px solid #4a90d944", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>
+                  HOUSE
+                </span>
+              )}
+              {candidate.officeType === "us_house" && candidate.isBattleground && (
+                <span style={{ background: "#1a1000", color: "#f0a500", border: "1px solid #f0a50044", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: 1 }} title="Battleground district — full AI analysis priority">
+                  ⚡ Battleground
+                </span>
+              )}
+              {candidate.incumbentStatus && candidate.incumbentStatus.includes("incumbent") && (
                 <span style={{ background: "var(--bg-elevated)", color: "var(--text-5)", border: "1px solid var(--border-strong)", padding: "2px 8px", borderRadius: 4, fontSize: 11 }}>
                   {candidate.incumbentStatus === "incumbent (appointed)" ? "Appointed" : "Incumbent"}
                 </span>
@@ -421,7 +431,9 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
               <StatusBadge candidate={candidate} />
             </div>
             <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4, fontFamily: "'DM Mono', monospace" }}>
-              {candidate.state} · {candidate.office}
+              {candidate.officeType === "us_house" && candidate.district
+                ? `${candidate.state}-${candidate.district} · ${candidate.office}`
+                : `${candidate.state} · ${candidate.office}`}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -484,7 +496,9 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
           {candidate.climateAnalysis && (
             <div style={{ background: "var(--bg-analysis)", border: "1px solid var(--border-analysis)", borderRadius: 8, padding: 14, marginTop: 12 }}>
               <div style={{ color: "var(--analysis-label)", fontSize: 11, letterSpacing: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>
-                ✦ AI CLIMATE ANALYSIS
+                {candidate.officeType === "us_house" && candidate.tier === 3
+                  ? "⟁ ALGORITHMIC SCORE — based on party affiliation and donation data"
+                  : "✦ AI CLIMATE ANALYSIS"}
               </div>
               <ReactMarkdown
                 components={{
@@ -518,6 +532,23 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
             >
               {analyzing === candidate.id ? "⟳ Analyzing..." : "✦ Run Climate Analysis"}
             </button>
+            {candidate.officeType === "us_house" && candidate.climateAnalysis && candidate.tier > 1 && (
+              <button
+                onClick={() => onAnalyze({ ...candidate, forceFullAnalysis: true })}
+                disabled={analyzing === candidate.id}
+                style={{
+                  background: "var(--bg-elevated)", color: "#4a90d9",
+                  border: "1px solid #4a90d944",
+                  padding: "8px 18px", borderRadius: 6,
+                  cursor: analyzing === candidate.id ? "not-allowed" : "pointer",
+                  fontSize: 13, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
+                  transition: "all 0.2s"
+                }}
+                title="Run full Tier 1 AI analysis (uses more API credits)"
+              >
+                ↑ Upgrade to Full Analysis
+              </button>
+            )}
             <button
               onClick={e => { e.stopPropagation(); onCompare(candidate); }}
               style={{
@@ -851,10 +882,12 @@ export default function ClimateTracker({ initialCandidates }) {
     setAnalyzingAll(false);
   };
 
-  const senateCandidates = candidates.filter(c => (c.officeType ?? "us_senate") !== "governor");
+  const senateCandidates = candidates.filter(c => (c.officeType ?? "us_senate") === "us_senate");
   const govCandidates = candidates.filter(c => c.officeType === "governor");
+  const houseCandidates = candidates.filter(c => c.officeType === "us_house");
   const senateAnalyzed = senateCandidates.filter(c => c.climateScore !== null).length;
   const govAnalyzed = govCandidates.filter(c => c.climateScore !== null).length;
+  const houseAnalyzed = houseCandidates.filter(c => c.climateScore !== null).length;
   const analyzedCount = candidates.filter(c => c.climateScore !== null).length;
   const avgScore = analyzedCount > 0
     ? Math.round(candidates.filter(c => c.climateScore !== null).reduce((a, c) => a + c.climateScore, 0) / analyzedCount)
@@ -900,6 +933,7 @@ export default function ClimateTracker({ initialCandidates }) {
               {[
                 { label: "Senate", value: senateCandidates.length, sub: `${senateAnalyzed} analyzed` },
                 { label: "Governor", value: govCandidates.length, sub: `${govAnalyzed} analyzed` },
+                { label: "House", value: houseCandidates.length, sub: `${houseAnalyzed} analyzed` },
                 { label: "Avg Score", value: avgScore !== null ? `${avgScore}/100` : "—", sub: `${analyzedCount} total analyzed` },
               ].map(({ label, value, sub }) => (
                 <div key={label} style={{ textAlign: "right" }}>
@@ -939,7 +973,7 @@ export default function ClimateTracker({ initialCandidates }) {
 
           {/* Office type tabs */}
           <div style={{ display: "flex", gap: 0, marginTop: 20, borderBottom: "1px solid var(--border)" }}>
-            {[["all", "All Offices"], ["us_senate", "U.S. Senate"], ["governor", "Governor"]].map(([val, label]) => {
+            {[["all", "All Offices"], ["us_senate", "U.S. Senate"], ["governor", "Governor"], ["us_house", "U.S. House"]].map(([val, label]) => {
               const active = filter.officeType === val;
               return (
                 <button key={val} onClick={() => setFilter(f => ({ ...f, officeType: val }))} style={{
@@ -1024,6 +1058,21 @@ export default function ClimateTracker({ initialCandidates }) {
 
       {/* Main content */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 32px" }}>
+        {/* House informational banner */}
+        {filter.officeType === "us_house" && (
+          <div style={{
+            background: "#0a1a2e", border: "1px solid #4a90d944", borderRadius: 8,
+            padding: "12px 16px", marginBottom: 16,
+            color: "#4a90d9", fontSize: 13, fontFamily: "'DM Mono', monospace",
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <span style={{ fontSize: 16 }}>ℹ</span>
+            <span>
+              Showing House candidates. Battleground districts (marked with ⚡) have full AI analysis priority.
+              Safe-seat candidates receive an algorithmic score based on party affiliation and donation data.
+            </span>
+          </div>
+        )}
         {/* Legend */}
         <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
           <span style={{ color: "var(--text-deep)", fontSize: 12, fontFamily: "'DM Mono', monospace", alignSelf: "center" }}>SCORE:</span>
