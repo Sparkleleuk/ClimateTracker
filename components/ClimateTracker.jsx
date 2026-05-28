@@ -29,7 +29,7 @@ const CANDIDATES = [
   },
   {
     id: 3, name: "Roy Cooper", state: "North Carolina", office: "U.S. Senate", party: "D",
-    incumbentStatus: "challenger", raceCompetitiveness: "Lean R",
+    incumbentStatus: "challenger", raceCompetitiveness: "Lean R", candidacyStatus: "nominee",
     primaryDate: "May 19, 2026", generalDate: "Nov 3, 2026",
     climateScore: null, climateAnalysis: null,
     knownPositions: "As Governor signed executive orders on clean energy; set 2050 carbon neutrality goals for NC.",
@@ -40,7 +40,7 @@ const CANDIDATES = [
   },
   {
     id: 4, name: "Michael Whatley", state: "North Carolina", office: "U.S. Senate", party: "R",
-    incumbentStatus: "challenger", raceCompetitiveness: "Lean R",
+    incumbentStatus: "challenger", raceCompetitiveness: "Lean R", candidacyStatus: "nominee",
     primaryDate: "May 19, 2026", generalDate: "Nov 3, 2026",
     climateScore: null, climateAnalysis: null,
     knownPositions: "Former RNC Chairman. Trump-endorsed. Limited public climate record.",
@@ -62,7 +62,7 @@ const CANDIDATES = [
   },
   {
     id: 6, name: "Sherrod Brown", state: "Ohio", office: "U.S. Senate (Special)", party: "D",
-    incumbentStatus: "challenger", raceCompetitiveness: "Lean R",
+    incumbentStatus: "challenger", raceCompetitiveness: "Lean R", candidacyStatus: "nominee",
     primaryDate: "May 5, 2026", generalDate: "Nov 3, 2026",
     climateScore: null, climateAnalysis: null,
     knownPositions: "Former Senator; has supported clean energy manufacturing. Mixed fossil fuel record for Ohio.",
@@ -73,7 +73,7 @@ const CANDIDATES = [
   },
   {
     id: 7, name: "Jon Husted", state: "Ohio", office: "U.S. Senate (Special)", party: "R",
-    incumbentStatus: "incumbent (appointed)", raceCompetitiveness: "Lean R",
+    incumbentStatus: "incumbent (appointed)", raceCompetitiveness: "Lean R", candidacyStatus: "nominee",
     primaryDate: "May 5, 2026", generalDate: "Nov 3, 2026",
     climateScore: null, climateAnalysis: null,
     knownPositions: "Appointed by Gov. DeWine. Supportive of Ohio energy sector including natural gas.",
@@ -95,14 +95,14 @@ const CANDIDATES = [
   },
   {
     id: 9, name: "John Cornyn", state: "Texas", office: "U.S. Senate", party: "R",
-    incumbentStatus: "incumbent", raceCompetitiveness: "Likely R",
+    incumbentStatus: "incumbent", raceCompetitiveness: "Likely R", candidacyStatus: "nominee",
     primaryDate: "Mar 3, 2026", generalDate: "Nov 3, 2026",
     climateScore: null, climateAnalysis: null,
     knownPositions: "Strongly pro-oil & gas. Opposed IRA, climate regulations. Supported LNG exports.",
     fossilFuelDonations: "high",
     fossilFuelAmount: "$4,067,906", fossilFuelCycle: "Career total (through 2020)",
     fossilFuelSource: "https://www.opensecrets.org/members-of-congress/john-cornyn/industries?cid=N00024852",
-    opponent: "James Talarico (D); Cornyn in R runoff vs. Ken Paxton (May 26)",
+    opponent: "James Talarico (D)",
   },
   {
     id: 10, name: "Mark Warner", state: "Virginia", office: "U.S. Senate", party: "D",
@@ -196,7 +196,7 @@ const CANDIDATES = [
   },
   {
     id: 18, name: "Dan Osborn", state: "Nebraska", office: "U.S. Senate", party: "I",
-    incumbentStatus: "challenger", raceCompetitiveness: "Lean R",
+    incumbentStatus: "challenger", raceCompetitiveness: "Lean R", candidacyStatus: "nominee",
     primaryDate: "May 12, 2026", generalDate: "Nov 3, 2026",
     climateScore: null, climateAnalysis: null,
     knownPositions: "Independent. Ran strong race in 2024. Labor-focused. Climate position not prominently defined.",
@@ -435,6 +435,11 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
                 ? `${candidate.state}-${candidate.district} · ${candidate.office}`
                 : `${candidate.state} · ${candidate.office}`}
             </div>
+            {candidate.officeType === "us_house" && candidate.districtLocation && (
+              <div style={{ color: "var(--text-5)", fontSize: 12, marginTop: 2 }}>
+                📍 {candidate.districtLocation}
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{

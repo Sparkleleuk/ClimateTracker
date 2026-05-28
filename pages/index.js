@@ -42,6 +42,7 @@ export async function getServerSideProps() {
       opponent:            row.opponent,
       ballotpediaUrl:      row.ballotpedia_url,
       district:            row.district ?? null,
+      districtLocation:    row.district_pvi ?? null,
       isBattleground:      row.is_battleground ?? false,
       tier:                row.tier ?? null,
       climateScore:        row.climate_score ?? null,
