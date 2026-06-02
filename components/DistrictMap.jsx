@@ -68,7 +68,9 @@ export default function DistrictMap({ candidate, onClose }) {
       // Remove stale Leaflet container flag if the div was reused
       delete mapRef.current._leaflet_id
 
-      const [lat, lng, zoom] = STATE_CENTERS[candidate.state] ?? [39.5, -98.35, 4]
+      const center = STATE_CENTERS[candidate.state]
+      console.log('[DistrictMap] state:', candidate.state, '→ center:', center)
+      const [lat, lng, zoom] = center ?? [39.5, -98.35, 4]
       const map = L.map(mapRef.current, { zoomControl: true, center: [lat, lng], zoom })
       mapInstance.current = map
 
