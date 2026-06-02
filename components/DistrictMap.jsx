@@ -54,7 +54,7 @@ export default function DistrictMap({ candidate, onClose }) {
   const abbr = STATE_ABBR[candidate.state] ?? ''
   const district = candidate.district ?? ''
   const districtKey = `${abbr}-${district}`
-  const geoJsonUrl = `https://raw.githubusercontent.com/unitedstates/districts/gh-pages/cds/2022/${districtKey}/shape.geojson`
+  const geoJsonUrl = `https://raw.githubusercontent.com/unitedstates/districts/gh-pages/cds/2012/${districtKey}/shape.geojson`
 
   useEffect(() => {
     let cancelled = false
@@ -68,9 +68,7 @@ export default function DistrictMap({ candidate, onClose }) {
       // Remove stale Leaflet container flag if the div was reused
       delete mapRef.current._leaflet_id
 
-      const center = STATE_CENTERS[candidate.state]
-      console.log('[DistrictMap] state:', candidate.state, '→ center:', center)
-      const [lat, lng, zoom] = center ?? [39.5, -98.35, 4]
+      const [lat, lng, zoom] = STATE_CENTERS[candidate.state] ?? [39.5, -98.35, 4]
       const map = L.map(mapRef.current, { zoomControl: true, center: [lat, lng], zoom })
       mapInstance.current = map
 
@@ -100,10 +98,7 @@ export default function DistrictMap({ candidate, onClose }) {
         setStatus('ok')
       } catch (err) {
         console.error('[DistrictMap] GeoJSON load failed:', err.message)
-        if (!cancelled) {
-          map.setView([39.5, -98.35], 4)
-          setStatus('error')
-        }
+        if (!cancelled) setStatus('error')
       }
     }
 
