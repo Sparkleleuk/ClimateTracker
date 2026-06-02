@@ -1,7 +1,10 @@
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { analyzeCandidate as fetchAnalysis } from "../services/climateApi";
 import { compareCandiates } from "../services/compareApi";
 import ReactMarkdown from "react-markdown";
+
+const DistrictMap = dynamic(() => import("./DistrictMap"), { ssr: false });
 
 const CANDIDATES = [
   // === SENATE - COMPETITIVE RACES ===
@@ -383,7 +386,7 @@ function ScoreBadge({ score }) {
   );
 }
 
-function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
+function CandidateCard({ candidate, onAnalyze, analyzing, onCompare, onMap }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -566,6 +569,21 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare }) {
             >
               ⊕ Compare with Opponents
             </button>
+            {candidate.officeType === "us_house" && candidate.district && (
+              <button
+                onClick={e => { e.stopPropagation(); onMap(candidate); }}
+                style={{
+                  background: "var(--bg-elevated)", color: "#4a90d9",
+                  border: "1px solid #4a90d944",
+                  padding: "8px 18px", borderRadius: 6, cursor: "pointer",
+                  fontSize: 13, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
+                  transition: "all 0.2s"
+                }}
+                title="View the counties covered by this congressional district"
+              >
+                🗺 View District Map
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -805,6 +823,7 @@ export default function ClimateTracker({ initialCandidates }) {
   const [dark, setDark] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState(null);
+  const [mapCandidate, setMapCandidate] = useState(null);
 
   // Show admin controls when URL contains ?admin=true
   const isAdmin = typeof window !== "undefined"
@@ -906,6 +925,11 @@ export default function ClimateTracker({ initialCandidates }) {
 
   return (
     <div data-theme={dark ? "dark" : "light"} style={{ minHeight: "100vh", background: "var(--bg-page)", color: "var(--text-1)", fontFamily: "'DM Sans', sans-serif" }}>
+      {/* District map modal */}
+      {mapCandidate && (
+        <DistrictMap candidate={mapCandidate} onClose={() => setMapCandidate(null)} />
+      )}
+
       {/* Sync toast */}
       {syncToast && (
         <div style={{
@@ -1096,7 +1120,7 @@ export default function ClimateTracker({ initialCandidates }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filtered.map(c => (
             <CandidateCard key={c.id} candidate={c} onAnalyze={analyzeCandidate} analyzing={analyzing}
-              onCompare={setCompareCandidate} />
+              onCompare={setCompareCandidate} onMap={setMapCandidate} />
           ))}
         </div>
 
