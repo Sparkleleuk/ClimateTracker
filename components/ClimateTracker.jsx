@@ -569,7 +569,7 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare, onMap }) {
             >
               ⊕ Compare with Opponents
             </button>
-            {candidate.officeType === "us_house" && candidate.district && (
+            {((candidate.officeType === "us_house" && candidate.district) || candidate.officeType === "us_senate") && (
               <button
                 onClick={e => { e.stopPropagation(); onMap(candidate); }}
                 style={{
@@ -579,9 +579,9 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare, onMap }) {
                   fontSize: 13, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5,
                   transition: "all 0.2s"
                 }}
-                title="View the counties covered by this congressional district"
+                title={candidate.officeType === "us_senate" ? "View the state this senator represents" : "View the counties covered by this congressional district"}
               >
-                🗺 View District Map
+                🗺 {candidate.officeType === "us_senate" ? "View State Map" : "View District Map"}
               </button>
             )}
           </div>

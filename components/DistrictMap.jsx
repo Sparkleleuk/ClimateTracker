@@ -70,12 +70,15 @@ export default function DistrictMap({ candidate, onClose }) {
 
   const abbr = STATE_ABBR[candidate.state] ?? ''
   const district = candidate.district ?? ''
-  const districtKey = `${abbr}-${district}`
+  const isSenate = candidate.officeType === 'us_senate' || !district
+  const districtKey = isSenate ? abbr : `${abbr}-${district}`
 
   const fips = STATE_FIPS[candidate.state] ?? ''
   const districtPadded = String(district).padStart(2, '0')
   const geoJsonUrl = fips
-    ? `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Legislative/MapServer/54/query?where=STATEFP%3D%27${fips}%27%20AND%20CD118FP%3D%27${districtPadded}%27&outFields=GEOID&outSR=4326&f=geojson`
+    ? isSenate
+      ? `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/0/query?where=STATEFP%3D%27${fips}%27&outFields=NAME&outSR=4326&f=geojson`
+      : `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Legislative/MapServer/54/query?where=STATEFP%3D%27${fips}%27%20AND%20CD118FP%3D%27${districtPadded}%27&outFields=GEOID&outSR=4326&f=geojson`
     : ''
 
   useEffect(() => {
@@ -214,7 +217,7 @@ export default function DistrictMap({ candidate, onClose }) {
               borderRadius: 6, padding: '6px 14px', zIndex: 10,
               color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace", fontSize: 12,
             }}>
-              District boundary unavailable — showing US overview
+              Boundary unavailable — showing state overview
             </div>
           )}
         </div>
@@ -225,7 +228,7 @@ export default function DistrictMap({ candidate, onClose }) {
           display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap',
         }}>
           <div style={{ color: 'var(--text-dim)', fontSize: 11, fontFamily: "'DM Mono', monospace" }}>
-            County boundaries visible at closer zoom · Green shading = district area
+            County boundaries visible at closer zoom · Green shading = {isSenate ? 'state' : 'district'} area
           </div>
           {candidate.ballotpediaUrl && (
             <a
