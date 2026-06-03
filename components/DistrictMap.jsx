@@ -112,12 +112,12 @@ export default function DistrictMap({ candidate, onClose }) {
         if (!geojson.features?.length) throw new Error('No features returned')
 
         const layer = L.geoJSON(geojson, {
-          style: {
+          style: () => ({
             color: '#27ae60',
-            weight: 2.5,
+            weight: 3,
             fillColor: '#27ae60',
-            fillOpacity: 0.12,
-          },
+            fillOpacity: 0.25,
+          }),
         }).addTo(map)
 
         const bounds = layer.getBounds()
