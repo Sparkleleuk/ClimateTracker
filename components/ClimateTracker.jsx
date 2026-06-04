@@ -87,14 +87,14 @@ const CANDIDATES = [
   },
   {
     id: 8, name: "Ashley Hinson", state: "Iowa", office: "U.S. Senate", party: "R",
-    incumbentStatus: "challenger", raceCompetitiveness: "Likely R",
+    incumbentStatus: "challenger", raceCompetitiveness: "Likely R", candidacyStatus: "nominee",
     primaryDate: "June 2, 2026", generalDate: "Nov 3, 2026",
     climateScore: null, climateAnalysis: null,
     knownPositions: "Congresswoman. Supports wind energy (Iowa is major wind state). Opposed carbon pricing.",
     fossilFuelDonations: "moderate",
     fossilFuelAmount: null, fossilFuelCycle: "2026 cycle",
     fossilFuelSource: "https://www.opensecrets.org/members-of-congress/ashley-hinson/industries?cid=N00044544&cycle=2024",
-    opponent: "D primary: Zach Wahls (leading), Josh Turek",
+    opponent: "Josh Turek (D)",
   },
   {
     id: 9, name: "John Cornyn", state: "Texas", office: "U.S. Senate", party: "R",
@@ -120,14 +120,14 @@ const CANDIDATES = [
   },
   {
     id: 11, name: "Cory Booker", state: "New Jersey", office: "U.S. Senate", party: "D",
-    incumbentStatus: "incumbent", raceCompetitiveness: "Lean D",
+    incumbentStatus: "incumbent", raceCompetitiveness: "Lean D", candidacyStatus: "nominee",
     primaryDate: "June 2, 2026", generalDate: "Nov 3, 2026",
     climateScore: null, climateAnalysis: null,
     knownPositions: "Strong climate champion. Co-sponsored Green New Deal. Advocates environmental justice.",
     fossilFuelDonations: "low",
     fossilFuelAmount: "$0", fossilFuelCycle: "Ongoing",
     fossilFuelSource: "https://nofossilfuelmoney.org/pledges/",
-    opponent: "R primary: Alex Zdan (leading), Justin Murphy",
+    opponent: "Justin Murphy (R)",
   },
   {
     id: 12, name: "William Cassidy", state: "Louisiana", office: "U.S. Senate", party: "R",
