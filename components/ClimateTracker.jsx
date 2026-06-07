@@ -1287,6 +1287,13 @@ export default function ClimateTracker({ initialCandidates }) {
     return lastName(a.name).localeCompare(lastName(b.name));
   });
 
+  // ── Reset request form state whenever the search term changes ──
+  useEffect(() => {
+    setRequestFormOpen(false);
+    setRequestStatus(null);
+    setDuplicateMatch(null);
+  }, [filter.search]);
+
   // ── Search analytics: log zero-result searches (debounced, once per unique term) ──
   useEffect(() => {
     if (!filter.search || filtered.length > 0) return;
