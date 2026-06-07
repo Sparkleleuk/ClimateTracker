@@ -1208,6 +1208,9 @@ export default function ClimateTracker({ initialCandidates }) {
   const [leaderboardMode, setLeaderboardMode] = useState(null);
   const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [requestFormOpen, setRequestFormOpen] = useState(false);
+  const [requestForm, setRequestForm] = useState({ name: "", state: "", office: "", party: "", source_url: "" });
+  const [requestStatus, setRequestStatus] = useState(null); // null | "submitting" | "success" | "duplicate" | "error" | "rate_limited"
 
   const DEFAULT_FILTER = {
     party: "all", state: "", competitiveness: "all", analyzed: "all",
@@ -1759,9 +1762,212 @@ export default function ClimateTracker({ initialCandidates }) {
             ))}
           </div>
 
-          {filtered.length === 0 && (
+          {filtered.length === 0 && !filter.search && (
             <div style={{ textAlign: "center", padding: 60, color: "var(--text-ghost)", fontFamily: "'DM Mono', monospace" }}>
               No candidates match your filters.
+            </div>
+          )}
+
+          {filtered.length === 0 && filter.search && (
+            <div style={{ textAlign: "center", padding: "48px 24px", fontFamily: "'DM Mono', monospace" }}>
+              <div style={{ fontSize: 15, color: "var(--text-deep)", marginBottom: 8 }}>
+                No candidates found for <span style={{ color: "var(--green)" }}>&ldquo;{filter.search}&rdquo;</span>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-ghost)", marginBottom: 24 }}>
+                Is this candidate missing from our tracker?
+              </div>
+
+              {!requestFormOpen && requestStatus !== "success" && (
+                <button
+                  onClick={() => {
+                    setRequestForm({ name: filter.search, state: "", office: "", party: "", source_url: "" });
+                    setRequestStatus(null);
+                    setRequestFormOpen(true);
+                  }}
+                  style={{
+                    background: "var(--green)", color: "#000", border: "none", borderRadius: 6,
+                    padding: "10px 20px", fontSize: 12, fontFamily: "'DM Mono', monospace",
+                    cursor: "pointer", fontWeight: 600, letterSpacing: 0.5,
+                  }}
+                >
+                  + Request &ldquo;{filter.search}&rdquo; be added
+                </button>
+              )}
+
+              {requestStatus === "success" && (
+                <div style={{ fontSize: 12, color: "var(--green)", marginTop: 8 }}>
+                  ✓ Request submitted — we&apos;ll review it shortly.
+                </div>
+              )}
+
+              {requestFormOpen && requestStatus !== "success" && (
+                <div style={{
+                  margin: "24px auto 0", maxWidth: 480, textAlign: "left",
+                  background: "var(--surface)", border: "1px solid var(--border-mid)",
+                  borderRadius: 8, padding: 24,
+                }}>
+                  <div style={{ fontSize: 12, color: "var(--text-deep)", marginBottom: 16, letterSpacing: 1 }}>
+                    REQUEST A CANDIDATE
+                  </div>
+
+                  {/* Name */}
+                  <label style={{ display: "block", fontSize: 11, color: "var(--text-ghost)", marginBottom: 4 }}>
+                    CANDIDATE NAME *
+                  </label>
+                  <input
+                    value={requestForm.name}
+                    onChange={e => setRequestForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Full name"
+                    style={{
+                      width: "100%", boxSizing: "border-box", background: "var(--bg)", border: "1px solid var(--border-mid)",
+                      color: "var(--text-deep)", borderRadius: 4, padding: "8px 10px", fontSize: 12,
+                      fontFamily: "'DM Mono', monospace", marginBottom: 12,
+                    }}
+                  />
+
+                  {/* State */}
+                  <label style={{ display: "block", fontSize: 11, color: "var(--text-ghost)", marginBottom: 4 }}>
+                    STATE *
+                  </label>
+                  <select
+                    value={requestForm.state}
+                    onChange={e => setRequestForm(f => ({ ...f, state: e.target.value }))}
+                    style={{
+                      width: "100%", boxSizing: "border-box", background: "var(--bg)", border: "1px solid var(--border-mid)",
+                      color: requestForm.state ? "var(--text-deep)" : "var(--text-ghost)",
+                      borderRadius: 4, padding: "8px 10px", fontSize: 12,
+                      fontFamily: "'DM Mono', monospace", marginBottom: 12,
+                    }}
+                  >
+                    <option value="">Select state…</option>
+                    {states.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+
+                  {/* Office */}
+                  <label style={{ display: "block", fontSize: 11, color: "var(--text-ghost)", marginBottom: 4 }}>
+                    OFFICE *
+                  </label>
+                  <select
+                    value={requestForm.office}
+                    onChange={e => setRequestForm(f => ({ ...f, office: e.target.value }))}
+                    style={{
+                      width: "100%", boxSizing: "border-box", background: "var(--bg)", border: "1px solid var(--border-mid)",
+                      color: requestForm.office ? "var(--text-deep)" : "var(--text-ghost)",
+                      borderRadius: 4, padding: "8px 10px", fontSize: 12,
+                      fontFamily: "'DM Mono', monospace", marginBottom: 12,
+                    }}
+                  >
+                    <option value="">Select office…</option>
+                    <option value="U.S. Senate">U.S. Senate</option>
+                    <option value="U.S. House">U.S. House</option>
+                    <option value="Governor">Governor</option>
+                  </select>
+
+                  {/* Party (optional) */}
+                  <label style={{ display: "block", fontSize: 11, color: "var(--text-ghost)", marginBottom: 4 }}>
+                    PARTY <span style={{ color: "var(--text-ghost)", fontWeight: 400 }}>(optional)</span>
+                  </label>
+                  <select
+                    value={requestForm.party}
+                    onChange={e => setRequestForm(f => ({ ...f, party: e.target.value }))}
+                    style={{
+                      width: "100%", boxSizing: "border-box", background: "var(--bg)", border: "1px solid var(--border-mid)",
+                      color: requestForm.party ? "var(--text-deep)" : "var(--text-ghost)",
+                      borderRadius: 4, padding: "8px 10px", fontSize: 12,
+                      fontFamily: "'DM Mono', monospace", marginBottom: 12,
+                    }}
+                  >
+                    <option value="">Unknown / not sure</option>
+                    <option value="D">Democrat</option>
+                    <option value="R">Republican</option>
+                    <option value="I">Independent</option>
+                    <option value="L">Libertarian</option>
+                    <option value="G">Green</option>
+                  </select>
+
+                  {/* Source URL (optional) */}
+                  <label style={{ display: "block", fontSize: 11, color: "var(--text-ghost)", marginBottom: 4 }}>
+                    SOURCE URL <span style={{ color: "var(--text-ghost)", fontWeight: 400 }}>(optional)</span>
+                  </label>
+                  <input
+                    value={requestForm.source_url}
+                    onChange={e => setRequestForm(f => ({ ...f, source_url: e.target.value }))}
+                    placeholder="https://ballotpedia.org/…"
+                    type="url"
+                    style={{
+                      width: "100%", boxSizing: "border-box", background: "var(--bg)", border: "1px solid var(--border-mid)",
+                      color: "var(--text-deep)", borderRadius: 4, padding: "8px 10px", fontSize: 12,
+                      fontFamily: "'DM Mono', monospace", marginBottom: 16,
+                    }}
+                  />
+
+                  {/* Status messages */}
+                  {requestStatus === "error" && (
+                    <div style={{ fontSize: 11, color: "#f87171", marginBottom: 12 }}>
+                      Something went wrong — please try again.
+                    </div>
+                  )}
+                  {requestStatus === "rate_limited" && (
+                    <div style={{ fontSize: 11, color: "#f87171", marginBottom: 12 }}>
+                      You&apos;ve submitted 5 requests today. Try again tomorrow.
+                    </div>
+                  )}
+                  {requestStatus === "duplicate" && (
+                    <div style={{ fontSize: 11, color: "var(--green)", marginBottom: 12 }}>
+                      This candidate is already in our tracker — try adjusting your search.
+                    </div>
+                  )}
+
+                  {/* Buttons */}
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    <button
+                      onClick={() => { setRequestFormOpen(false); setRequestStatus(null); }}
+                      style={{
+                        background: "transparent", color: "var(--text-ghost)", border: "1px solid var(--border-mid)",
+                        borderRadius: 4, padding: "8px 16px", fontSize: 11, fontFamily: "'DM Mono', monospace",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={requestStatus === "submitting" || !requestForm.name.trim() || !requestForm.state || !requestForm.office}
+                      onClick={async () => {
+                        setRequestStatus("submitting");
+                        try {
+                          const res = await fetch("/api/request-candidate", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(requestForm),
+                          });
+                          const data = await res.json();
+                          if (res.status === 429) {
+                            setRequestStatus("rate_limited");
+                          } else if (!res.ok) {
+                            setRequestStatus("error");
+                          } else if (data.status === "duplicate") {
+                            setRequestStatus("duplicate");
+                          } else {
+                            setRequestStatus("success");
+                            setRequestFormOpen(false);
+                          }
+                        } catch {
+                          setRequestStatus("error");
+                        }
+                      }}
+                      style={{
+                        background: requestStatus === "submitting" ? "var(--border-mid)" : "var(--green)",
+                        color: "#000", border: "none", borderRadius: 4,
+                        padding: "8px 16px", fontSize: 11, fontFamily: "'DM Mono', monospace",
+                        cursor: requestStatus === "submitting" ? "default" : "pointer", fontWeight: 600,
+                        opacity: (!requestForm.name.trim() || !requestForm.state || !requestForm.office) ? 0.4 : 1,
+                      }}
+                    >
+                      {requestStatus === "submitting" ? "Submitting…" : "Submit Request"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
