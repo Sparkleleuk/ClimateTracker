@@ -2030,7 +2030,7 @@ export default function ClimateTracker({ initialCandidates }) {
                     }).catch(() => {});
                   }}
                   style={{
-                    background: "var(--accent)", color: "#000", border: "none", borderRadius: 6,
+                    background: "#27ae60", color: "#fff", border: "none", borderRadius: 6,
                     padding: "10px 20px", fontSize: 12, fontFamily: "'DM Mono', monospace",
                     cursor: "pointer", fontWeight: 600, letterSpacing: 0.5,
                   }}
