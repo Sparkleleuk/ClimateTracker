@@ -52,6 +52,20 @@ All analysis is **nonpartisan**. Scores reflect policy alignment — not party a
 - **Congressional district maps** — Interactive Leaflet maps showing US Census 119th Congress district boundaries
 - **Race competitiveness ratings** — Cook Political Report and Sabato's Crystal Ball
 
+### Candidate Request Flow
+- **Zero-result search empty state** — When a name search returns no results, users see a "No candidates found for [term]" prompt with a **+ Request be added** button
+- **Inline request form** — Expands in place with name pre-filled; fields for state, office, optional party, and optional source URL
+- **Duplicate detection** — Before saving, the API checks the candidates table with a case-insensitive match; duplicates show a mini candidate card with Yes/No confirmation instead of a form error
+- **Rate limiting** — Cookie-based limit of 5 submissions per session per 24 hours
+- **Search analytics** — Every zero-result search is logged to `search_analytics` (debounced, once per unique term); a separate log entry records when users click through to the request form
+
+### Admin Review Panel *(at ?admin=true)*
+- **Candidate Requests section** — Appears above the candidate list; shows a pending count badge and a full table of pending requests
+- **Pending table columns** — Name, State, Office, editable Party dropdown, Source URL link, Submitted date, Add Candidate button, Reject button
+- **Add Candidate** — Inserts directly into the `candidates` table using request data; disabled until party is set (required by schema); marks request `approved` and moves it to the archive instantly
+- **Reject** — Marks request `rejected` and moves it to the archive
+- **Collapsible archive** — Shows all approved and rejected requests with status badges and reviewed dates
+
 ---
 
 ## Climate Scoring Methodology
@@ -197,9 +211,10 @@ Edit `.env.local` with your credentials:
 
 1. Open your Supabase project → **SQL Editor**
 2. Paste and run the full contents of `supabase/schema.sql`
-3. Run the AI policy migration:
+3. Run migrations in order:
    ```
    supabase/migrations/005_ai_policy_scoring.sql
+   supabase/migrations/006_candidate_requests.sql
    ```
 4. Run the seed script to populate all candidates:
 
@@ -254,12 +269,16 @@ ClimateTracker/
 ├── pages/
 │   ├── index.js                 # Entry point — loads candidates via getServerSideProps
 │   └── api/
-│       ├── analyze.js           # Climate analysis endpoint
-│       ├── analyze-ai.js        # AI policy analysis endpoint (independent)
-│       ├── compare.js           # Climate comparison endpoint
-│       ├── compare-ai.js        # AI policy comparison endpoint (by dimension)
-│       ├── candidates.js        # Returns candidate list from Supabase
-│       └── sync.js              # Ballotpedia sync endpoint (cron + admin)
+│       ├── analyze.js               # Climate analysis endpoint
+│       ├── analyze-ai.js            # AI policy analysis endpoint (independent)
+│       ├── compare.js               # Climate comparison endpoint
+│       ├── compare-ai.js            # AI policy comparison endpoint (by dimension)
+│       ├── candidates.js            # Returns candidate list from Supabase
+│       ├── sync.js                  # Ballotpedia sync endpoint (cron + admin)
+│       ├── request-candidate.js     # Save user candidate requests; dupe check + rate limit
+│       ├── log-search.js            # Log zero-result searches to search_analytics
+│       ├── admin-requests.js        # Admin: fetch pending + archived candidate requests
+│       └── admin-request-action.js  # Admin: approve (insert candidate) or reject a request
 ├── lib/
 │   ├── constants/
 │   │   ├── tiers.js             # Analysis tier definitions
@@ -293,7 +312,8 @@ ClimateTracker/
 │       ├── 002_filing_deadlines.sql
 │       ├── 003_office_types.sql
 │       ├── 004_house_candidates.sql
-│       └── 005_ai_policy_scoring.sql  # ai_analyses, big_tech_donations, ai_bill_cosponsors
+│       ├── 005_ai_policy_scoring.sql  # ai_analyses, big_tech_donations, ai_bill_cosponsors
+│       └── 006_candidate_requests.sql # candidate_requests, search_analytics
 ├── styles/
 │   └── climate.css              # Theme tokens, filter layout, responsive breakpoints
 ├── .env.example                 # Required environment variables (safe to commit)
@@ -329,10 +349,12 @@ The automated sync pipeline runs every Monday and:
 | FEC Big Tech PAC donation integration | ✅ Complete | — |
 | Congress.gov AI bill co-sponsorship tracking | ✅ Complete | — |
 | Data center district mapping | ✅ Complete | — |
+| Candidate request flow (user submissions) | ✅ Complete | — |
+| Search analytics (zero-result logging) | ✅ Complete | — |
+| Admin candidate request review panel | ✅ Complete | — |
 | FEC fossil fuel donation data (full integration) | 🔲 Planned | High |
 | State legislature candidates | 🔲 Planned | Medium |
 | Per-issue scoring breakdown | 🔲 Planned | Medium |
-| Admin review panel | 🔲 Planned | Medium |
 | Email alerts for score changes | 🔲 Planned | Low |
 | Public API for researchers | 🔲 Planned | Low |
 | Mobile app | 🔲 Planned | Low |
