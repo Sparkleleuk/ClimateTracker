@@ -1148,7 +1148,7 @@ export default function ClimateTracker({ initialCandidates }) {
   const [analyzingAllAI, setAnalyzingAllAI] = useState(false);
   const [filter, setFilter] = useState({
     party: "all", state: "", competitiveness: "all", analyzed: "all",
-    aiScore: "all", issue: "all", search: "", officeType: "all",
+    aiScore: "all", climateIssue: "all", aiIssue: "all", search: "", officeType: "all",
     dataCenterOnly: false, bigTechFunded: false, aiBillSponsor: false,
   });
   const [globalError, setGlobalError] = useState(null);
@@ -1196,7 +1196,8 @@ export default function ClimateTracker({ initialCandidates }) {
     if (filter.competitiveness !== "all" && c.raceCompetitiveness !== filter.competitiveness) return false;
     if (filter.analyzed === "yes" && c.climateScore === null) return false;
     if (filter.analyzed === "no" && c.climateScore !== null) return false;
-    if (filter.issue !== "all" && !c.issues?.includes(filter.issue)) return false;
+    if (filter.climateIssue !== "all" && !c.issues?.includes(filter.climateIssue)) return false;
+    if (filter.aiIssue !== "all" && (c.aiDimensions == null || (c.aiDimensions[filter.aiIssue] ?? 0) < 60)) return false;
     if (filter.search && !c.name.toLowerCase().includes(filter.search.toLowerCase())) return false;
     // AI filters — Step 5
     if (filter.aiScore === "strong"      && (c.aiPolicyScore == null || c.aiPolicyScore < 70)) return false;
@@ -1381,15 +1382,26 @@ export default function ClimateTracker({ initialCandidates }) {
             })}
           </div>
 
-          {/* Row 1: Climate filters */}
+          {/* Row 1: Filters */}
           <div className="filter-row">
-            <select style={selectStyle} value={filter.issue} onChange={e => setFilter(f => ({ ...f, issue: e.target.value }))}>
-              <option value="all">All Issues</option>
+            <select style={selectStyle} value={filter.climateIssue} onChange={e => setFilter(f => ({ ...f, climateIssue: e.target.value }))}>
+              <option value="all">🌿 All Climate Issues</option>
               {ISSUE_FILTERS.map(group => (
                 <optgroup key={group.category} label={group.category}>
                   {group.issues.map(issue => <option key={issue.value} value={issue.value}>{issue.label}</option>)}
                 </optgroup>
               ))}
+            </select>
+            <select style={{ ...selectStyle, borderColor: "#2980b944", color: filter.aiIssue !== "all" ? "#4a90d9" : undefined }}
+              value={filter.aiIssue} onChange={e => setFilter(f => ({ ...f, aiIssue: e.target.value }))}>
+              <option value="all">⚡ All AI Issues</option>
+              <option value="datacenters_energy">Data Center Energy</option>
+              <option value="ai_safety">AI Safety & Oversight</option>
+              <option value="algorithmic_accountability">Algorithmic Accountability</option>
+              <option value="ai_elections">AI in Elections</option>
+              <option value="water_usage">Water Usage Policy</option>
+              <option value="grid_impact">Grid Impact</option>
+              <option value="ai_economic">AI Economic Policy</option>
             </select>
             <select style={selectStyle} value={filter.party} onChange={e => setFilter(f => ({ ...f, party: e.target.value }))}>
               <option value="all">All Parties</option>
