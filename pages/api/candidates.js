@@ -51,6 +51,7 @@ export default async function handler(req, res) {
     climateScore:         row.climate_score ?? null,
     climateAnalysis:      row.climate_analysis ?? null,
     issues:               row.issue_tags ?? [],
+    aiPolicyScore:        row.ai_policy_score ?? null,
   }))
 
   res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600')

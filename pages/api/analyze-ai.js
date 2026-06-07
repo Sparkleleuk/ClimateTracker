@@ -212,7 +212,7 @@ export default async function handler(req, res) {
       }).eq('id', candidateId)
     }
 
-    return res.status(200).json({ score, analysis, dimensions, stances, cached: false })
+    return res.status(200).json({ score, analysis, dimensions, stances, bigTechLevel: bigTechResult.level, aiBills, cached: false })
   } catch (err) {
     console.error('[analyze-ai] Error:', err)
     return res.status(500).json({ error: err.message ?? 'Analysis failed' })
