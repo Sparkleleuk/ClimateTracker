@@ -1208,6 +1208,13 @@ export default function ClimateTracker({ initialCandidates }) {
   const [leaderboardMode, setLeaderboardMode] = useState(null);
   const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [adminRequests, setAdminRequests] = useState({ pending: [], archived: [] });
+  const [adminRequestsLoading, setAdminRequestsLoading] = useState(false);
+  const [adminArchiveExpanded, setAdminArchiveExpanded] = useState(false);
+  const [adminRequestAction, setAdminRequestAction] = useState({});   // { [id]: 'approving'|'rejecting' }
+  const [adminRequestParty, setAdminRequestParty] = useState({});     // { [id]: 'D'|'R'|... }
+  const [adminRequestsError, setAdminRequestsError] = useState(null);
+
   const [requestFormOpen, setRequestFormOpen] = useState(false);
   const [requestForm, setRequestForm] = useState({ name: "", state: "", office: "", party: "", source_url: "" });
   const [requestStatus, setRequestStatus] = useState(null); // null | "submitting" | "success" | "duplicate" | "confirmed_duplicate" | "error" | "rate_limited"
@@ -1294,6 +1301,53 @@ export default function ClimateTracker({ initialCandidates }) {
     }, 800);
     return () => clearTimeout(timer);
   }, [filter.search, filtered.length]);
+
+  // ── Admin: load candidate requests ──
+  useEffect(() => {
+    if (!isAdmin) return;
+    setAdminRequestsLoading(true);
+    fetch('/api/admin-requests')
+      .then(r => r.json())
+      .then(data => {
+        setAdminRequests(data);
+        // Pre-fill party edits from existing request values
+        const edits = {};
+        (data.pending ?? []).forEach(r => { if (r.party) edits[r.id] = r.party; });
+        setAdminRequestParty(edits);
+      })
+      .catch(() => setAdminRequestsError('Failed to load requests'))
+      .finally(() => setAdminRequestsLoading(false));
+  }, [isAdmin]);
+
+  const handleAdminAction = async (id, action) => {
+    const party = adminRequestParty[id];
+    setAdminRequestAction(prev => ({ ...prev, [id]: action === 'approve' ? 'approving' : 'rejecting' }));
+    try {
+      const res = await fetch('/api/admin-request-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action, party }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error ?? 'Action failed');
+        setAdminRequestAction(prev => ({ ...prev, [id]: null }));
+        return;
+      }
+      // Move the row from pending → archived locally
+      setAdminRequests(prev => {
+        const row = prev.pending.find(r => r.id === id);
+        const updatedRow = { ...row, status: action === 'approve' ? 'approved' : 'rejected', reviewed_at: new Date().toISOString() };
+        return {
+          pending: prev.pending.filter(r => r.id !== id),
+          archived: [updatedRow, ...prev.archived],
+        };
+      });
+    } catch {
+      alert('Network error — please try again');
+      setAdminRequestAction(prev => ({ ...prev, [id]: null }));
+    }
+  };
 
   // ── Climate analysis ──
   const analyzeCandidate = async (candidate) => {
@@ -1713,6 +1767,167 @@ export default function ClimateTracker({ initialCandidates }) {
               </div>
             )}
           </div>
+
+          {/* ── Admin: Candidate Requests ── */}
+          {isAdmin && (
+            <div style={{ marginBottom: 16, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", fontFamily: "'DM Mono', monospace" }}>
+
+              {/* Header */}
+              <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, borderBottom: adminRequests.pending.length > 0 ? "1px solid var(--border-mid)" : undefined }}>
+                <span style={{ fontSize: 10, letterSpacing: 1.5, color: "var(--text-dim)" }}>CANDIDATE REQUESTS</span>
+                {adminRequestsLoading
+                  ? <span style={{ fontSize: 10, color: "var(--text-ghost)" }}>loading…</span>
+                  : adminRequests.pending.length > 0 && (
+                    <span style={{ background: "#f59e0b", color: "#000", borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
+                      {adminRequests.pending.length} pending
+                    </span>
+                  )
+                }
+                {adminRequestsError && <span style={{ fontSize: 11, color: "#f87171" }}>{adminRequestsError}</span>}
+              </div>
+
+              {/* Pending table */}
+              {!adminRequestsLoading && adminRequests.pending.length === 0 && !adminRequestsError && (
+                <div style={{ padding: "14px", fontSize: 11, color: "var(--text-ghost)" }}>No pending requests.</div>
+              )}
+
+              {adminRequests.pending.length > 0 && (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                    <thead>
+                      <tr style={{ background: "var(--bg-elevated)" }}>
+                        {["Name", "State", "Office", "Party", "Source", "Submitted", ""].map(h => (
+                          <th key={h} style={{ padding: "6px 10px", textAlign: "left", color: "var(--text-dim)", fontWeight: 400, letterSpacing: 0.8, fontSize: 10, whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminRequests.pending.map(r => {
+                        const acting = adminRequestAction[r.id];
+                        const party = adminRequestParty[r.id] ?? "";
+                        return (
+                          <tr key={r.id} style={{ borderTop: "1px solid var(--border-mid)" }}>
+                            <td style={{ padding: "8px 10px", color: "var(--text-deep)" }}>{r.requested_name}</td>
+                            <td style={{ padding: "8px 10px", color: "var(--text-deep)" }}>{r.state}</td>
+                            <td style={{ padding: "8px 10px", color: "var(--text-deep)", whiteSpace: "nowrap" }}>{r.office}</td>
+                            <td style={{ padding: "8px 6px" }}>
+                              <select
+                                value={party}
+                                onChange={e => setAdminRequestParty(prev => ({ ...prev, [r.id]: e.target.value }))}
+                                style={{
+                                  background: "var(--bg)", border: "1px solid var(--border-mid)", color: party ? "var(--text-deep)" : "var(--text-ghost)",
+                                  borderRadius: 4, padding: "3px 6px", fontSize: 11, fontFamily: "'DM Mono', monospace", width: 52,
+                                }}
+                              >
+                                <option value="">—</option>
+                                <option value="D">D</option>
+                                <option value="R">R</option>
+                                <option value="I">I</option>
+                                <option value="L">L</option>
+                                <option value="G">G</option>
+                              </select>
+                            </td>
+                            <td style={{ padding: "8px 10px" }}>
+                              {r.source_url
+                                ? <a href={r.source_url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "none" }}>🔗 link</a>
+                                : <span style={{ color: "var(--text-ghost)" }}>—</span>
+                              }
+                            </td>
+                            <td style={{ padding: "8px 10px", color: "var(--text-ghost)", whiteSpace: "nowrap" }}>
+                              {new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </td>
+                            <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button
+                                  disabled={!party || acting === 'approving'}
+                                  onClick={() => handleAdminAction(r.id, 'approve')}
+                                  title={!party ? "Select a party first" : "Add to candidates table"}
+                                  style={{
+                                    background: !party ? "var(--bg-elevated)" : "var(--green)", color: !party ? "var(--text-ghost)" : "#000",
+                                    border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 10, fontFamily: "'DM Mono', monospace",
+                                    cursor: !party || acting ? "not-allowed" : "pointer", fontWeight: 600,
+                                  }}
+                                >
+                                  {acting === 'approving' ? "Adding…" : "Add Candidate"}
+                                </button>
+                                <button
+                                  disabled={!!acting}
+                                  onClick={() => handleAdminAction(r.id, 'reject')}
+                                  style={{
+                                    background: "transparent", color: "#f87171", border: "1px solid rgba(248,113,113,0.3)",
+                                    borderRadius: 4, padding: "4px 10px", fontSize: 10, fontFamily: "'DM Mono', monospace",
+                                    cursor: acting ? "not-allowed" : "pointer",
+                                  }}
+                                >
+                                  {acting === 'rejecting' ? "Rejecting…" : "Reject"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Archive (collapsible) */}
+              {adminRequests.archived.length > 0 && (
+                <div style={{ borderTop: "1px solid var(--border-mid)" }}>
+                  <button
+                    onClick={() => setAdminArchiveExpanded(v => !v)}
+                    style={{
+                      width: "100%", background: "none", border: "none", padding: "8px 14px",
+                      display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+                      color: "var(--text-ghost)", fontSize: 10, fontFamily: "'DM Mono', monospace", textAlign: "left",
+                    }}
+                  >
+                    <span>{adminArchiveExpanded ? "▼" : "▶"}</span>
+                    <span>
+                      ARCHIVE — {adminRequests.archived.filter(r => r.status === "approved").length} approved,{" "}
+                      {adminRequests.archived.filter(r => r.status === "rejected").length} rejected
+                    </span>
+                  </button>
+                  {adminArchiveExpanded && (
+                    <div style={{ overflowX: "auto", borderTop: "1px solid var(--border-mid)" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                        <thead>
+                          <tr style={{ background: "var(--bg-elevated)" }}>
+                            {["Name", "State", "Office", "Party", "Status", "Reviewed"].map(h => (
+                              <th key={h} style={{ padding: "6px 10px", textAlign: "left", color: "var(--text-dim)", fontWeight: 400, letterSpacing: 0.8, fontSize: 10 }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adminRequests.archived.map(r => (
+                            <tr key={r.id} style={{ borderTop: "1px solid var(--border-mid)", opacity: 0.7 }}>
+                              <td style={{ padding: "7px 10px", color: "var(--text-deep)" }}>{r.requested_name}</td>
+                              <td style={{ padding: "7px 10px", color: "var(--text-ghost)" }}>{r.state}</td>
+                              <td style={{ padding: "7px 10px", color: "var(--text-ghost)" }}>{r.office}</td>
+                              <td style={{ padding: "7px 10px", color: "var(--text-ghost)" }}>{r.party ?? "—"}</td>
+                              <td style={{ padding: "7px 10px" }}>
+                                <span style={{
+                                  background: r.status === "approved" ? "rgba(74,222,128,0.12)" : "rgba(248,113,113,0.1)",
+                                  color: r.status === "approved" ? "var(--green)" : "#f87171",
+                                  borderRadius: 4, padding: "2px 7px", fontSize: 10,
+                                }}>
+                                  {r.status}
+                                </span>
+                              </td>
+                              <td style={{ padding: "7px 10px", color: "var(--text-ghost)", whiteSpace: "nowrap" }}>
+                                {r.reviewed_at ? new Date(r.reviewed_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          )}
 
           {/* Results count + active filter tags */}
           <div style={{ marginBottom: 12 }}>
