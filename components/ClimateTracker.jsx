@@ -1850,7 +1850,7 @@ export default function ClimateTracker({ initialCandidates }) {
                                   onClick={() => handleAdminAction(r.id, 'approve')}
                                   title={!party ? "Select a party first" : "Add to candidates table"}
                                   style={{
-                                    background: !party ? "var(--bg-elevated)" : "var(--green)", color: !party ? "var(--text-ghost)" : "#000",
+                                    background: !party ? "var(--bg-elevated)" : "var(--accent)", color: !party ? "var(--text-ghost)" : "#000",
                                     border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 10, fontFamily: "'DM Mono', monospace",
                                     cursor: !party || acting ? "not-allowed" : "pointer", fontWeight: 600,
                                   }}
@@ -1915,7 +1915,7 @@ export default function ClimateTracker({ initialCandidates }) {
                               <td style={{ padding: "7px 10px" }}>
                                 <span style={{
                                   background: r.status === "approved" ? "rgba(74,222,128,0.12)" : "rgba(248,113,113,0.1)",
-                                  color: r.status === "approved" ? "var(--green)" : "#f87171",
+                                  color: r.status === "approved" ? "var(--accent)" : "#f87171",
                                   borderRadius: 4, padding: "2px 7px", fontSize: 10,
                                 }}>
                                   {r.status}
@@ -2010,7 +2010,7 @@ export default function ClimateTracker({ initialCandidates }) {
           {filtered.length === 0 && filter.search && (
             <div style={{ textAlign: "center", padding: "48px 24px", fontFamily: "'DM Mono', monospace" }}>
               <div style={{ fontSize: 15, color: "var(--text-deep)", marginBottom: 8 }}>
-                No candidates found for <span style={{ color: "var(--green)" }}>&ldquo;{filter.search}&rdquo;</span>
+                No candidates found for <span style={{ color: "var(--accent)" }}>&ldquo;{filter.search}&rdquo;</span>
               </div>
               <div style={{ fontSize: 12, color: "var(--text-ghost)", marginBottom: 24 }}>
                 Is this candidate missing from our tracker?
@@ -2030,7 +2030,7 @@ export default function ClimateTracker({ initialCandidates }) {
                     }).catch(() => {});
                   }}
                   style={{
-                    background: "var(--green)", color: "#000", border: "none", borderRadius: 6,
+                    background: "var(--accent)", color: "#000", border: "none", borderRadius: 6,
                     padding: "10px 20px", fontSize: 12, fontFamily: "'DM Mono', monospace",
                     cursor: "pointer", fontWeight: 600, letterSpacing: 0.5,
                   }}
@@ -2040,13 +2040,13 @@ export default function ClimateTracker({ initialCandidates }) {
               )}
 
               {requestStatus === "success" && (
-                <div style={{ fontSize: 12, color: "var(--green)", marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 8 }}>
                   ✓ Request submitted — we&apos;ll review it shortly.
                 </div>
               )}
 
               {requestStatus === "confirmed_duplicate" && duplicateMatch && (
-                <div style={{ fontSize: 12, color: "var(--green)", marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 8 }}>
                   ✓ {duplicateMatch.name} is already tracked — try clearing your search to find them.
                 </div>
               )}
@@ -2192,7 +2192,7 @@ export default function ClimateTracker({ initialCandidates }) {
                         <button
                           onClick={() => { setRequestFormOpen(false); setRequestStatus("confirmed_duplicate"); }}
                           style={{
-                            flex: 1, background: "var(--green)", color: "#000", border: "none",
+                            flex: 1, background: "var(--accent)", color: "#000", border: "none",
                             borderRadius: 4, padding: "7px 0", fontSize: 11,
                             fontFamily: "'DM Mono', monospace", cursor: "pointer", fontWeight: 600,
                           }}
@@ -2253,7 +2253,7 @@ export default function ClimateTracker({ initialCandidates }) {
                         }
                       }}
                       style={{
-                        background: requestStatus === "submitting" ? "var(--border-mid)" : "var(--green)",
+                        background: requestStatus === "submitting" ? "var(--border-mid)" : "var(--accent)",
                         color: "#000", border: "none", borderRadius: 4,
                         padding: "8px 16px", fontSize: 11, fontFamily: "'DM Mono', monospace",
                         cursor: requestStatus === "submitting" ? "default" : "pointer", fontWeight: 600,
