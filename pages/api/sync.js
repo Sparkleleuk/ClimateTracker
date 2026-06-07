@@ -1,7 +1,6 @@
 import { scrapeBallotpedia2026Senate, scrapeBallotpedia2026Governors } from '../../lib/scrapers/ballotpedia.js'
 import { scrapeBallotpedia2026House } from '../../lib/scrapers/ballotpediaHouse.js'
 import { syncCandidates } from '../../lib/sync/candidateSync.js'
-import { computeAlgorithmicScore } from '../../lib/scoring/algorithmicScore.js'
 import { computeDataHash } from '../../lib/utils/dataHash.js'
 
 export default async function handler(req, res) {
@@ -45,12 +44,7 @@ export default async function handler(req, res) {
         fossil_fuel_donations: c.fossilFuelDonations ?? null,
         incumbent_status:    c.incumbentStatus ?? null,
       })
-      return {
-        ...c,
-        dataHash,
-        // tier is already set by the scraper (1 for battleground, 2 otherwise)
-        // Safe incumbents with no known positions could be Tier 3 — handled below
-      }
+      return { ...c, dataHash }
     })
 
     const scraped = [...senateScraped, ...govScraped, ...houseAnnotated]
@@ -67,52 +61,6 @@ export default async function handler(req, res) {
 
     const summary = await syncCandidates(scraped)
 
-    // Post-sync: for Tier 3 House candidates (safe incumbents, tier=2 but no known positions),
-    // compute and persist algorithmic scores immediately
-    const tier3Candidates = houseAnnotated.filter(c =>
-      c.incumbentStatus === 'incumbent' &&
-      !c.isBattleground &&
-      !c.knownPositions
-    )
-
-    let tier3Scored = 0
-    if (tier3Candidates.length > 0) {
-      console.log(`[sync] Computing algorithmic scores for ${tier3Candidates.length} Tier 3 House candidates…`)
-      try {
-        const { supabase } = await import('../../lib/supabaseClient.js')
-        for (const c of tier3Candidates) {
-          // Look up the DB record to get the ID
-          const { data: rows } = await supabase
-            .from('candidates')
-            .select('id')
-            .eq('name', c.name)
-            .eq('state', c.state)
-            .limit(1)
-
-          const dbId = rows?.[0]?.id
-          if (!dbId) continue
-
-          const algoResult = computeAlgorithmicScore({
-            party:               c.party,
-            fossilFuelDonations: c.fossilFuelDonations ?? 'unknown',
-            knownPositions:      c.knownPositions ?? '',
-          })
-
-          await supabase.from('candidates').update({
-            climate_score:    algoResult.score,
-            climate_analysis: algoResult.summary,
-            issue_tags:       [],
-          }).eq('id', dbId)
-
-          tier3Scored++
-        }
-      } catch (err) {
-        console.error('[sync] Error computing Tier 3 algorithmic scores:', err.message)
-      }
-    }
-
-    const houseBattlegroundCount = houseAnnotated.filter(c => c.isBattleground).length
-
     return res.status(200).json({
       ok: true,
       startedAt,
@@ -120,8 +68,6 @@ export default async function handler(req, res) {
       senateCount: senateScraped.length,
       govCount: govScraped.length,
       houseCount: houseAnnotated.length,
-      houseBattlegroundCount,
-      tier3Scored,
       summary: {
         added:      summary.added,
         updated:    summary.updated,
@@ -136,8 +82,7 @@ export default async function handler(req, res) {
         summary.withdrawn.length  && `${summary.withdrawn.length} marked withdrew`,
         summary.nominees.length   && `${summary.nominees.length} marked nominee`,
         summary.eliminated.length && `${summary.eliminated.length} marked eliminated`,
-        houseAnnotated.length     && `${houseAnnotated.length} House candidates scraped (${houseBattlegroundCount} battleground)`,
-        tier3Scored               && `${tier3Scored} algorithmic scores computed`,
+        houseAnnotated.length     && `${houseAnnotated.length} battleground House candidates scraped`,
         summary.errors.length     && `${summary.errors.length} error(s)`,
       ].filter(Boolean).join(', ') || 'No changes',
     })
