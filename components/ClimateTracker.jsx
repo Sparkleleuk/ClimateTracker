@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { analyzeCandidate as fetchAnalysis } from "../services/climateApi";
 import { compareCandiates } from "../services/compareApi";
@@ -1210,7 +1210,9 @@ export default function ClimateTracker({ initialCandidates }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [requestFormOpen, setRequestFormOpen] = useState(false);
   const [requestForm, setRequestForm] = useState({ name: "", state: "", office: "", party: "", source_url: "" });
-  const [requestStatus, setRequestStatus] = useState(null); // null | "submitting" | "success" | "duplicate" | "error" | "rate_limited"
+  const [requestStatus, setRequestStatus] = useState(null); // null | "submitting" | "success" | "duplicate" | "confirmed_duplicate" | "error" | "rate_limited"
+  const [duplicateMatch, setDuplicateMatch] = useState(null);
+  const lastLoggedSearch = useRef("");
 
   const DEFAULT_FILTER = {
     party: "all", state: "", competitiveness: "all", analyzed: "all",
@@ -1277,6 +1279,21 @@ export default function ClimateTracker({ initialCandidates }) {
     const lastName = name => name.split(" ").at(-1);
     return lastName(a.name).localeCompare(lastName(b.name));
   });
+
+  // ── Search analytics: log zero-result searches (debounced, once per unique term) ──
+  useEffect(() => {
+    if (!filter.search || filtered.length > 0) return;
+    if (lastLoggedSearch.current === filter.search) return;
+    const timer = setTimeout(() => {
+      lastLoggedSearch.current = filter.search;
+      fetch("/api/log-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ search_term: filter.search, results_count: 0, triggered_request_form: false }),
+      }).catch(() => {});
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [filter.search, filtered.length]);
 
   // ── Climate analysis ──
   const analyzeCandidate = async (candidate) => {
@@ -1777,12 +1794,18 @@ export default function ClimateTracker({ initialCandidates }) {
                 Is this candidate missing from our tracker?
               </div>
 
-              {!requestFormOpen && requestStatus !== "success" && (
+              {!requestFormOpen && requestStatus !== "success" && requestStatus !== "confirmed_duplicate" && (
                 <button
                   onClick={() => {
                     setRequestForm({ name: filter.search, state: "", office: "", party: "", source_url: "" });
                     setRequestStatus(null);
+                    setDuplicateMatch(null);
                     setRequestFormOpen(true);
+                    fetch("/api/log-search", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ search_term: filter.search, results_count: 0, triggered_request_form: true }),
+                    }).catch(() => {});
                   }}
                   style={{
                     background: "var(--green)", color: "#000", border: "none", borderRadius: 6,
@@ -1797,6 +1820,12 @@ export default function ClimateTracker({ initialCandidates }) {
               {requestStatus === "success" && (
                 <div style={{ fontSize: 12, color: "var(--green)", marginTop: 8 }}>
                   ✓ Request submitted — we&apos;ll review it shortly.
+                </div>
+              )}
+
+              {requestStatus === "confirmed_duplicate" && duplicateMatch && (
+                <div style={{ fontSize: 12, color: "var(--green)", marginTop: 8 }}>
+                  ✓ {duplicateMatch.name} is already tracked — try clearing your search to find them.
                 </div>
               )}
 
@@ -1907,18 +1936,63 @@ export default function ClimateTracker({ initialCandidates }) {
                       Something went wrong — please try again.
                     </div>
                   )}
+
                   {requestStatus === "rate_limited" && (
-                    <div style={{ fontSize: 11, color: "#f87171", marginBottom: 12 }}>
-                      You&apos;ve submitted 5 requests today. Try again tomorrow.
-                    </div>
-                  )}
-                  {requestStatus === "duplicate" && (
-                    <div style={{ fontSize: 11, color: "var(--green)", marginBottom: 12 }}>
-                      This candidate is already in our tracker — try adjusting your search.
+                    <div style={{ padding: "12px 14px", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 6, marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, color: "#f87171", fontWeight: 600, marginBottom: 4 }}>Daily limit reached</div>
+                      <div style={{ fontSize: 11, color: "var(--text-ghost)" }}>
+                        You&apos;ve submitted 5 requests in the last 24 hours. Please check back tomorrow.
+                      </div>
                     </div>
                   )}
 
-                  {/* Buttons */}
+                  {requestStatus === "duplicate" && duplicateMatch && (
+                    <div style={{ padding: "12px 14px", background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 6, marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, color: "var(--text-ghost)", marginBottom: 8 }}>
+                        We found a candidate already in our tracker:
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                          background: duplicateMatch.party === "D" ? "#3b82f6" : duplicateMatch.party === "R" ? "#ef4444" : "var(--border-mid)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 13, fontWeight: 700, color: "#fff",
+                        }}>
+                          {duplicateMatch.party ?? "?"}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, color: "var(--text-deep)", fontWeight: 600 }}>{duplicateMatch.name}</div>
+                          <div style={{ fontSize: 11, color: "var(--text-ghost)" }}>{duplicateMatch.office} · {duplicateMatch.state}</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text-ghost)", marginBottom: 10 }}>Is this the candidate you meant?</div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={() => { setRequestFormOpen(false); setRequestStatus("confirmed_duplicate"); }}
+                          style={{
+                            flex: 1, background: "var(--green)", color: "#000", border: "none",
+                            borderRadius: 4, padding: "7px 0", fontSize: 11,
+                            fontFamily: "'DM Mono', monospace", cursor: "pointer", fontWeight: 600,
+                          }}
+                        >
+                          Yes, that&apos;s them
+                        </button>
+                        <button
+                          onClick={() => { setDuplicateMatch(null); setRequestStatus(null); }}
+                          style={{
+                            flex: 1, background: "transparent", color: "var(--text-ghost)",
+                            border: "1px solid var(--border-mid)", borderRadius: 4, padding: "7px 0",
+                            fontSize: 11, fontFamily: "'DM Mono', monospace", cursor: "pointer",
+                          }}
+                        >
+                          No, different person
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Buttons — hidden once duplicate card or rate limit is showing */}
+                  {requestStatus !== "duplicate" && requestStatus !== "rate_limited" && (
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     <button
                       onClick={() => { setRequestFormOpen(false); setRequestStatus(null); }}
@@ -1946,6 +2020,7 @@ export default function ClimateTracker({ initialCandidates }) {
                           } else if (!res.ok) {
                             setRequestStatus("error");
                           } else if (data.status === "duplicate") {
+                            setDuplicateMatch(data.candidate ?? null);
                             setRequestStatus("duplicate");
                           } else {
                             setRequestStatus("success");
@@ -1966,6 +2041,7 @@ export default function ClimateTracker({ initialCandidates }) {
                       {requestStatus === "submitting" ? "Submitting…" : "Submit Request"}
                     </button>
                   </div>
+                  )}
                 </div>
               )}
             </div>
