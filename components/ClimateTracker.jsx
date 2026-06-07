@@ -1392,7 +1392,7 @@ export default function ClimateTracker({ initialCandidates }) {
                 </optgroup>
               ))}
             </select>
-            <select className="issues-select" style={{ ...selectStyle, borderColor: "#2980b944", color: filter.aiIssue !== "all" ? "#4a90d9" : undefined }}
+            <select className="issues-select" style={{ ...selectStyle, borderColor: "#2980b944", color: filter.aiIssue !== "all" ? "#4a90d9" : "var(--text-3)" }}
               value={filter.aiIssue} onChange={e => setFilter(f => ({ ...f, aiIssue: e.target.value }))}>
               <option value="all">⚡ All AI Issues</option>
               <option value="datacenters_energy">Data Center Energy</option>
