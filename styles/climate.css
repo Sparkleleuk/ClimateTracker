@@ -114,14 +114,20 @@ input::placeholder { color: var(--text-dim); }
 /* Filter toolbar */
 .filter-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   margin-top: 20px;
 }
 
 .filter-row select {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 150px;
+}
+
+.filter-row select.issues-select {
+  flex: 2 1 auto;
+  min-width: 200px;
 }
 
 .filter-actions-row {

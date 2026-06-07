@@ -1384,7 +1384,7 @@ export default function ClimateTracker({ initialCandidates }) {
 
           {/* Row 1: Filters */}
           <div className="filter-row">
-            <select style={selectStyle} value={filter.climateIssue} onChange={e => setFilter(f => ({ ...f, climateIssue: e.target.value }))}>
+            <select className="issues-select" style={selectStyle} value={filter.climateIssue} onChange={e => setFilter(f => ({ ...f, climateIssue: e.target.value }))}>
               <option value="all">🌿 All Climate Issues</option>
               {ISSUE_FILTERS.map(group => (
                 <optgroup key={group.category} label={group.category}>
@@ -1392,7 +1392,7 @@ export default function ClimateTracker({ initialCandidates }) {
                 </optgroup>
               ))}
             </select>
-            <select style={{ ...selectStyle, borderColor: "#2980b944", color: filter.aiIssue !== "all" ? "#4a90d9" : undefined }}
+            <select className="issues-select" style={{ ...selectStyle, borderColor: "#2980b944", color: filter.aiIssue !== "all" ? "#4a90d9" : undefined }}
               value={filter.aiIssue} onChange={e => setFilter(f => ({ ...f, aiIssue: e.target.value }))}>
               <option value="all">⚡ All AI Issues</option>
               <option value="datacenters_energy">Data Center Energy</option>
