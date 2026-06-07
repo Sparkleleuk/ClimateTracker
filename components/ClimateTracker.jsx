@@ -317,6 +317,20 @@ const AI_COMPARE_ISSUES = [
   { value: "ai_economic",              label: "AI Economic Policy" },
 ].filter((v, i, a) => a.findIndex(x => x.label === v.label) === i); // dedupe
 
+// Flat label lookups for active filter tags
+const CLIMATE_ISSUE_LABELS = Object.fromEntries(
+  ISSUE_FILTERS.flatMap(g => g.issues.map(i => [i.value, i.label]))
+);
+const AI_ISSUE_LABELS = {
+  datacenters_energy:         "Data Center Energy",
+  ai_safety:                  "AI Safety & Oversight",
+  algorithmic_accountability: "Algorithmic Accountability",
+  ai_elections:               "AI in Elections",
+  water_usage:                "Water Usage Policy",
+  grid_impact:                "Grid Impact",
+  ai_economic:                "AI Economic Policy",
+};
+
 const STATUS_STYLE = {
   nominee:   { bg: "#0a2a0a", color: "#27ae60", border: "#27ae6055", label: "NOMINEE" },
   withdrew:  { bg: "#1a1a1a", color: "#666",    border: "#44444455", label: "WITHDREW" },
@@ -454,6 +468,39 @@ function DimensionBars({ dimensions }) {
         );
       })}
     </div>
+  );
+}
+
+// ─── ToggleRow ────────────────────────────────────────────────────────────────
+
+function ToggleRow({ icon, label, value, onChange, color = "#2980b9" }) {
+  return (
+    <button
+      onClick={() => onChange(!value)}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: "none", border: "none", cursor: "pointer",
+        padding: "7px 0", width: "100%", gap: 8,
+      }}
+    >
+      <span style={{ color: "var(--text-4)", fontSize: 12, fontFamily: "'DM Mono', monospace", textAlign: "left" }}>
+        {icon} {label}
+      </span>
+      <span style={{
+        flexShrink: 0, width: 36, height: 20, borderRadius: 10,
+        background: value ? color : "var(--bg-elevated)",
+        border: `1px solid ${value ? color + "99" : "var(--border-strong)"}`,
+        display: "flex", alignItems: "center", padding: 2,
+        transition: "background 0.2s",
+      }}>
+        <span style={{
+          width: 14, height: 14, borderRadius: "50%",
+          background: value ? "#fff" : "var(--text-dim)",
+          transition: "transform 0.2s",
+          transform: value ? "translateX(16px)" : "translateX(0)",
+        }} />
+      </span>
+    </button>
   );
 }
 
@@ -1130,7 +1177,7 @@ function CompareModal({ primary, opponents, onClose, cache, onCacheUpdate, allCa
   );
 }
 
-// ─── ClimateTracker (main export) ─────────────────────────────────────────────
+// ─── ClimateTracker (main export) — sidebar layout ───────────────────────────
 
 export default function ClimateTracker({ initialCandidates }) {
   // Normalise incoming candidates to always have AI fields
@@ -1158,7 +1205,16 @@ export default function ClimateTracker({ initialCandidates }) {
   const [syncing, setSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState(null);
   const [mapCandidate, setMapCandidate] = useState(null);
-  const [leaderboardMode, setLeaderboardMode] = useState(null); // null | "climate" | "ai" | "overall"
+  const [leaderboardMode, setLeaderboardMode] = useState(null);
+  const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const DEFAULT_FILTER = {
+    party: "all", state: "", competitiveness: "all", analyzed: "all",
+    aiScore: "all", climateIssue: "all", aiIssue: "all", search: "", officeType: "all",
+    dataCenterOnly: false, bigTechFunded: false, aiBillSponsor: false,
+  };
+  const clearAllFilters = () => setFilter(DEFAULT_FILTER);
 
   const isAdmin = typeof window !== "undefined"
     && new URLSearchParams(window.location.search).get("admin") === "true";
@@ -1194,8 +1250,11 @@ export default function ClimateTracker({ initialCandidates }) {
     if (filter.party !== "all" && c.party !== filter.party) return false;
     if (filter.state && c.state !== filter.state) return false;
     if (filter.competitiveness !== "all" && c.raceCompetitiveness !== filter.competitiveness) return false;
-    if (filter.analyzed === "yes" && c.climateScore === null) return false;
+    if ((filter.analyzed === "yes" || filter.analyzed === "climate") && c.climateScore === null) return false;
     if (filter.analyzed === "no" && c.climateScore !== null) return false;
+    if (filter.analyzed === "ai" && c.aiPolicyScore === null) return false;
+    if (filter.analyzed === "both" && (c.climateScore === null || c.aiPolicyScore === null)) return false;
+    if (filter.analyzed === "not" && (c.climateScore !== null || c.aiPolicyScore !== null)) return false;
     if (filter.climateIssue !== "all" && !c.issues?.includes(filter.climateIssue)) return false;
     if (filter.aiIssue !== "all" && (c.aiDimensions == null || (c.aiDimensions[filter.aiIssue] ?? 0) < 60)) return false;
     if (filter.search && !c.name.toLowerCase().includes(filter.search.toLowerCase())) return false;
@@ -1289,25 +1348,62 @@ export default function ClimateTracker({ initialCandidates }) {
     ? Math.round(candidates.filter(c => c.aiPolicyScore !== null).reduce((a, c) => a + c.aiPolicyScore, 0) / aiAnalyzedCount)
     : null;
 
-  const selectStyle = {
-    background: "var(--bg-card)", color: "var(--text-3)", border: "1px solid var(--border-subtle)",
-    padding: "8px 12px", borderRadius: 6, fontSize: 13,
-    fontFamily: "'DM Mono', monospace", cursor: "pointer", outline: "none"
+  // ── Active filter helpers ──
+  const activeFilterCount = [
+    filter.officeType !== "all", filter.party !== "all", filter.state !== "",
+    filter.competitiveness !== "all", filter.climateIssue !== "all", filter.aiIssue !== "all",
+    filter.analyzed !== "all", filter.aiScore !== "all",
+    filter.dataCenterOnly, filter.bigTechFunded, filter.aiBillSponsor,
+  ].filter(Boolean).length;
+
+  const activeTags = [
+    filter.party !== "all" && { label: ({ D: "Democrat", R: "Republican", I: "Independent" })[filter.party] || filter.party, clear: () => setFilter(f => ({ ...f, party: "all" })) },
+    filter.state && { label: filter.state, clear: () => setFilter(f => ({ ...f, state: "" })) },
+    filter.competitiveness !== "all" && { label: filter.competitiveness, clear: () => setFilter(f => ({ ...f, competitiveness: "all" })) },
+    filter.climateIssue !== "all" && { label: `🌿 ${CLIMATE_ISSUE_LABELS[filter.climateIssue] ?? filter.climateIssue}`, clear: () => setFilter(f => ({ ...f, climateIssue: "all" })) },
+    filter.aiIssue !== "all" && { label: `⚡ ${AI_ISSUE_LABELS[filter.aiIssue] ?? filter.aiIssue}`, clear: () => setFilter(f => ({ ...f, aiIssue: "all" })) },
+    filter.analyzed !== "all" && { label: ({ climate: "Climate Analyzed", ai: "AI Analyzed", both: "Both Analyzed", not: "Not Analyzed", yes: "Climate Analyzed", no: "Unanalyzed" })[filter.analyzed] || filter.analyzed, clear: () => setFilter(f => ({ ...f, analyzed: "all" })) },
+    filter.aiScore !== "all" && { label: ({ strong: "AI Strong 70+", mixed: "AI Mixed", weak: "AI Weak", "not-analyzed": "AI Not Analyzed" })[filter.aiScore] || filter.aiScore, clear: () => setFilter(f => ({ ...f, aiScore: "all" })) },
+    filter.dataCenterOnly && { label: "🏢 Data Center", clear: () => setFilter(f => ({ ...f, dataCenterOnly: false })) },
+    filter.bigTechFunded && { label: "💰 Big Tech Funded", clear: () => setFilter(f => ({ ...f, bigTechFunded: false })) },
+    filter.aiBillSponsor && { label: "📋 AI Bill Sponsor", clear: () => setFilter(f => ({ ...f, aiBillSponsor: false })) },
+  ].filter(Boolean);
+
+  // ── Leaderboard toggle ──
+  const handleLeaderboard = (mode) => {
+    if (leaderboardMode === mode) { setLeaderboardMode(null); setLeaderboardExpanded(false); }
+    else { setLeaderboardMode(mode); setLeaderboardExpanded(true); }
   };
 
-  const toggleStyle = (active) => ({
-    background: active ? "#071525" : "var(--bg-card)",
-    color: active ? "#4a90d9" : "var(--text-muted)",
-    border: `1px solid ${active ? "#2980b944" : "var(--border-subtle)"}`,
-    padding: "8px 12px", borderRadius: 6, cursor: "pointer",
-    fontSize: 12, fontFamily: "'DM Mono', monospace", letterSpacing: 0.3,
-    transition: "all 0.15s", whiteSpace: "nowrap",
-  });
+  // ── Shared styles ──
+  const sbSelect = {
+    background: "var(--bg-inner)", color: "var(--text-3)",
+    border: "1px solid var(--border-subtle)", padding: "7px 10px",
+    borderRadius: 6, fontSize: 12, fontFamily: "'DM Mono', monospace",
+    cursor: "pointer", outline: "none", width: "100%", display: "block",
+  };
+  const sectionLabel = {
+    color: "#555", fontSize: 10, fontFamily: "'DM Mono', monospace",
+    letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8,
+  };
+  const sectionDiv = { borderTop: "1px solid #1a1a1a", padding: "12px 16px" };
 
   return (
-    <div data-theme={dark ? "dark" : "light"} style={{ minHeight: "100vh", background: "var(--bg-page)", color: "var(--text-1)", fontFamily: "'DM Sans', sans-serif" }}>
+    <div data-theme={dark ? "dark" : "light"} className="layout-wrapper" style={{ color: "var(--text-1)", fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Modals */}
       {mapCandidate && <DistrictMap candidate={mapCandidate} onClose={() => setMapCandidate(null)} />}
+      {compareCandidate && (
+        <CompareModal
+          primary={compareCandidate}
+          opponents={getOpponents(compareCandidate)}
+          onClose={() => setCompareCandidate(null)}
+          cache={compareCache}
+          onCacheUpdate={(key, data) => setCompareCache(prev => ({ ...prev, [key]: data }))}
+          allCandidates={candidates}
+        />
+      )}
 
+      {/* Sync toast */}
       {syncToast && (
         <div style={{
           position: "fixed", bottom: 24, right: 24, zIndex: 300,
@@ -1321,80 +1417,112 @@ export default function ClimateTracker({ initialCandidates }) {
         </div>
       )}
 
-      {/* ── Header ── */}
-      <div style={{ borderBottom: "1px solid var(--border-mid)", padding: "24px 32px", background: "var(--bg-page)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 28 }}>🌿</span>
-                <h1 style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 900, letterSpacing: -0.5 }}>
-                  Climate Candidate Tracker
-                </h1>
-              </div>
-              <p style={{ margin: "6px 0 0 40px", color: "var(--text-dim)", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
-                2026 U.S. Primaries & Midterm Elections · AI-Powered Analysis
-              </p>
-            </div>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
 
-            {/* Step 4: header stats with avg AI score */}
-            <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
-              {[
-                { label: "Senate",      value: senateCandidates.length, sub: `${senateAnalyzed} analyzed` },
-                { label: "Governor",    value: govCandidates.length,    sub: `${govAnalyzed} analyzed` },
-                { label: "House",       value: houseCandidates.length,  sub: `${houseAnalyzed} analyzed` },
-                { label: "Avg Climate", value: avgScore != null ? `${avgScore}/100` : "—", sub: `${analyzedCount} analyzed` },
-                { label: "Avg AI Score",value: avgAIScore != null ? `${avgAIScore}/100` : "—", sub: `${aiAnalyzedCount} analyzed` },
-              ].map(({ label, value, sub }) => (
-                <div key={label} style={{ textAlign: "right" }}>
-                  <div style={{ color: label === "Avg AI Score" ? "#4a90d9" : "var(--accent)", fontFamily: "'DM Mono', monospace", fontSize: 20, fontWeight: 500 }}>{value}</div>
-                  <div style={{ color: "var(--text-deep)", fontSize: 11, letterSpacing: 1 }}>{label}</div>
-                  {sub && <div style={{ color: "var(--text-ghost)", fontSize: 10, letterSpacing: 0.5 }}>{sub}</div>}
-                </div>
-              ))}
+      {/* ════════════════════════════════════════════
+          SIDEBAR
+      ════════════════════════════════════════════ */}
+      <aside className={`sidebar${sidebarOpen ? " sidebar-open" : ""}`}>
 
-              <button onClick={() => setDark(d => !d)} title={dark ? "Switch to light mode" : "Switch to dark mode"}
-                style={{ background: "var(--toggle-bg)", border: "1px solid var(--toggle-border)", color: "var(--toggle-color)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 16, lineHeight: 1, marginLeft: 8 }}>
-                {dark ? "☀️" : "🌙"}
+        {/* Header: FILTERS (N) + Clear All */}
+        <div style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a1a1a", flexShrink: 0 }}>
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1.5, color: "var(--text-3)", fontWeight: 600 }}>
+            FILTERS{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+          </span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {activeFilterCount > 0 && (
+              <button onClick={clearAllFilters} style={{ color: "var(--text-muted)", fontSize: 11, fontFamily: "'DM Mono', monospace", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                ✕ Clear all
               </button>
-              {isAdmin && (
-                <button onClick={runSync} disabled={syncing}
-                  style={{ background: "var(--toggle-bg)", border: "1px solid var(--toggle-border)", color: syncing ? "var(--text-dim)" : "var(--accent)", borderRadius: 8, padding: "8px 12px", cursor: syncing ? "not-allowed" : "pointer", fontSize: 13, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, marginLeft: 4 }}>
-                  {syncing ? "⟳ Syncing…" : "↻ Sync"}
-                </button>
-              )}
+            )}
+            <button onClick={() => setSidebarOpen(false)} className="sidebar-close-btn" style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1 }}>×</button>
+          </div>
+        </div>
+
+        {/* Scrollable filter content */}
+        <div style={{ overflowY: "auto", flex: 1 }}>
+
+          {/* 1. OFFICE TYPE — pill grid */}
+          <div style={{ padding: "12px 16px" }}>
+            <div style={sectionLabel}>OFFICE TYPE</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {[["all", "All"], ["us_senate", "Senate"], ["governor", "Governor"], ["us_house", "House"]].map(([val, label]) => {
+                const active = filter.officeType === val;
+                return (
+                  <button key={val} onClick={() => setFilter(f => ({ ...f, officeType: val }))} style={{
+                    background: active ? "#27ae60" : "var(--bg-elevated)",
+                    color: active ? "#fff" : "var(--text-muted)",
+                    border: `1px solid ${active ? "#27ae6055" : "var(--border-strong)"}`,
+                    borderRadius: 6, padding: "6px 4px", fontSize: 12,
+                    fontFamily: "'DM Mono', monospace", cursor: "pointer", transition: "all 0.15s",
+                  }}>
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Office type tabs */}
-          <div style={{ display: "flex", gap: 0, marginTop: 20, borderBottom: "1px solid var(--border)" }}>
-            {[["all", "All Offices"], ["us_senate", "U.S. Senate"], ["governor", "Governor"], ["us_house", "U.S. House"]].map(([val, label]) => {
-              const active = filter.officeType === val;
-              return (
-                <button key={val} onClick={() => setFilter(f => ({ ...f, officeType: val }))} style={{
-                  padding: "8px 20px", background: "none", border: "none", borderBottom: active ? "2px solid var(--accent)" : "2px solid transparent",
-                  color: active ? "var(--accent)" : "var(--text-muted)", fontFamily: "'DM Mono', monospace", fontSize: 12,
-                  fontWeight: active ? 600 : 400, letterSpacing: 0.5, cursor: "pointer", marginBottom: -1, transition: "color 0.15s",
-                }}>
-                  {label}
-                </button>
-              );
-            })}
+          {/* 2. PARTY */}
+          <div style={sectionDiv}>
+            <div style={sectionLabel}>PARTY</div>
+            <select style={sbSelect} value={filter.party} onChange={e => setFilter(f => ({ ...f, party: e.target.value }))}>
+              <option value="all">All Parties</option>
+              <option value="D">Democrat</option>
+              <option value="R">Republican</option>
+              <option value="I">Independent</option>
+            </select>
           </div>
 
-          {/* Row 1: Filters */}
-          <div className="filter-row">
-            <select className="issues-select" style={selectStyle} value={filter.climateIssue} onChange={e => setFilter(f => ({ ...f, climateIssue: e.target.value }))}>
-              <option value="all">🌿 All Climate Issues</option>
+          {/* 3. RACE COMPETITIVENESS */}
+          <div style={sectionDiv}>
+            <div style={sectionLabel}>RACE COMPETITIVENESS</div>
+            <select style={sbSelect} value={filter.competitiveness} onChange={e => setFilter(f => ({ ...f, competitiveness: e.target.value }))}>
+              <option value="all">All Races</option>
+              {competitive.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* 4. STATE */}
+          <div style={sectionDiv}>
+            <div style={sectionLabel}>STATE</div>
+            <select style={sbSelect} value={filter.state} onChange={e => setFilter(f => ({ ...f, state: e.target.value }))}>
+              <option value="">All States</option>
+              {states.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+
+          {/* 5. CLIMATE */}
+          <div style={sectionDiv}>
+            <div style={{ ...sectionLabel, color: "#27ae60" }}>🌿 CLIMATE</div>
+            <select style={sbSelect} value={filter.climateIssue} onChange={e => setFilter(f => ({ ...f, climateIssue: e.target.value }))}>
+              <option value="all">All Climate Issues</option>
               {ISSUE_FILTERS.map(group => (
                 <optgroup key={group.category} label={group.category}>
                   {group.issues.map(issue => <option key={issue.value} value={issue.value}>{issue.label}</option>)}
                 </optgroup>
               ))}
             </select>
-            <select className="issues-select" style={{ ...selectStyle, borderColor: "#2980b944", ...(filter.aiIssue !== "all" && { color: "#4a90d9" }) }}
-              value={filter.aiIssue} onChange={e => setFilter(f => ({ ...f, aiIssue: e.target.value }))}>
-              <option value="all">⚡ All AI Issues</option>
+            <div style={{ height: 8 }} />
+            <select style={sbSelect} value={filter.analyzed === "climate" || filter.analyzed === "yes" ? "climate" : filter.analyzed === "no" ? "not-climate" : "all"}
+              onChange={e => {
+                const v = e.target.value;
+                setFilter(f => ({ ...f, analyzed: v === "climate" ? "climate" : v === "not-climate" ? "no" : f.analyzed === "climate" || f.analyzed === "no" ? "all" : f.analyzed }));
+              }}>
+              <option value="all">All Climate Scores</option>
+              <option value="climate">Climate Analyzed</option>
+              <option value="not-climate">Climate Unanalyzed</option>
+            </select>
+          </div>
+
+          {/* 6. AI POLICY */}
+          <div style={sectionDiv}>
+            <div style={{ ...sectionLabel, color: "#4a90d9" }}>⚡ AI POLICY</div>
+            <select style={{ ...sbSelect, borderColor: "#2980b944" }} value={filter.aiIssue} onChange={e => setFilter(f => ({ ...f, aiIssue: e.target.value }))}>
+              <option value="all">All AI Issues</option>
               <option value="datacenters_energy">Data Center Energy</option>
               <option value="ai_safety">AI Safety & Oversight</option>
               <option value="algorithmic_accountability">Algorithmic Accountability</option>
@@ -1403,181 +1531,247 @@ export default function ClimateTracker({ initialCandidates }) {
               <option value="grid_impact">Grid Impact</option>
               <option value="ai_economic">AI Economic Policy</option>
             </select>
-            <select style={selectStyle} value={filter.party} onChange={e => setFilter(f => ({ ...f, party: e.target.value }))}>
-              <option value="all">All Parties</option>
-              <option value="D">Democrat</option>
-              <option value="R">Republican</option>
-              <option value="I">Independent</option>
-            </select>
-            <select style={selectStyle} value={filter.state} onChange={e => setFilter(f => ({ ...f, state: e.target.value }))}>
-              <option value="">All States</option>
-              {states.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select style={selectStyle} value={filter.competitiveness} onChange={e => setFilter(f => ({ ...f, competitiveness: e.target.value }))}>
-              <option value="all">All Races</option>
-              {competitive.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <select style={selectStyle} value={filter.analyzed} onChange={e => setFilter(f => ({ ...f, analyzed: e.target.value }))}>
-              <option value="all">All</option>
-              <option value="yes">Climate Analyzed</option>
-              <option value="no">Climate Unanalyzed</option>
-            </select>
-          </div>
-
-          {/* Step 5: Row 2 — AI filters */}
-          <div className="filter-row" style={{ marginTop: 8 }}>
-            <select style={{ ...selectStyle, borderColor: "#2980b944", color: "#4a90d9" }}
-              value={filter.aiScore} onChange={e => setFilter(f => ({ ...f, aiScore: e.target.value }))}>
+            <div style={{ height: 8 }} />
+            <select style={{ ...sbSelect, borderColor: "#2980b944" }} value={filter.aiScore} onChange={e => setFilter(f => ({ ...f, aiScore: e.target.value }))}>
               <option value="all">All AI Scores</option>
-              <option value="strong">⚡ Strong (70+)</option>
-              <option value="mixed">⚡ Mixed (40–69)</option>
-              <option value="weak">⚡ Weak (&lt;40)</option>
+              <option value="strong">Strong (70+)</option>
+              <option value="mixed">Mixed (40–69)</option>
+              <option value="weak">Weak (&lt;40)</option>
               <option value="not-analyzed">Not AI Analyzed</option>
             </select>
-            <button style={toggleStyle(filter.dataCenterOnly)} onClick={() => setFilter(f => ({ ...f, dataCenterOnly: !f.dataCenterOnly }))}>
-              🏢 Data Center District
-            </button>
-            <button style={toggleStyle(filter.bigTechFunded)} onClick={() => setFilter(f => ({ ...f, bigTechFunded: !f.bigTechFunded }))}>
-              💰 Big Tech Funded
-            </button>
-            <button style={toggleStyle(filter.aiBillSponsor)} onClick={() => setFilter(f => ({ ...f, aiBillSponsor: !f.aiBillSponsor }))}>
-              📋 AI Bill Co-Sponsor
-            </button>
+            <div style={{ marginTop: 10 }}>
+              <ToggleRow icon="🏢" label="Data Center District" value={filter.dataCenterOnly} onChange={v => setFilter(f => ({ ...f, dataCenterOnly: v }))} />
+              <ToggleRow icon="💰" label="Big Tech Funded" value={filter.bigTechFunded} onChange={v => setFilter(f => ({ ...f, bigTechFunded: v }))} />
+              <ToggleRow icon="📋" label="AI Bill Co-Sponsor" value={filter.aiBillSponsor} onChange={v => setFilter(f => ({ ...f, aiBillSponsor: v }))} />
+            </div>
           </div>
 
-          {/* Row 3: Search + Step 10 dual Analyze All buttons */}
-          <div className="filter-actions-row">
+          {/* 7. ANALYSIS STATUS */}
+          <div style={sectionDiv}>
+            <div style={sectionLabel}>ANALYSIS STATUS</div>
+            <select style={sbSelect} value={filter.analyzed} onChange={e => setFilter(f => ({ ...f, analyzed: e.target.value }))}>
+              <option value="all">All</option>
+              <option value="climate">Climate Analyzed</option>
+              <option value="ai">AI Analyzed</option>
+              <option value="both">Both Analyzed</option>
+              <option value="not">Not Analyzed</option>
+            </select>
+          </div>
+
+        </div>{/* end scrollable */}
+
+        {/* Bottom: theme toggle */}
+        <div style={{ padding: "12px 16px", borderTop: "1px solid #1a1a1a", flexShrink: 0 }}>
+          <button onClick={() => setDark(d => !d)} style={{
+            width: "100%", background: "var(--bg-elevated)", border: "1px solid var(--border-strong)",
+            color: "var(--text-muted)", borderRadius: 6, padding: "8px 12px", cursor: "pointer",
+            fontSize: 12, fontFamily: "'DM Mono', monospace", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          }}>
+            {dark ? "☀️ Light Mode" : "🌙 Dark Mode"}
+          </button>
+        </div>
+      </aside>
+
+      {/* ════════════════════════════════════════════
+          MAIN CONTENT
+      ════════════════════════════════════════════ */}
+      <main className="main-content">
+
+        {/* ── Compact header strip ── */}
+        <div style={{ padding: "14px 24px", borderBottom: "1px solid var(--border-mid)", background: "var(--bg-page)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 22 }}>🌿</span>
+              <div>
+                <h1 style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 900, letterSpacing: -0.5, color: "var(--text-1)" }}>
+                  Climate Candidate Tracker
+                </h1>
+                <p style={{ margin: 0, color: "var(--text-dim)", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>
+                  2026 Midterms · AI-Powered Analysis
+                </p>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+              {[
+                { label: "Senate",      value: senateCandidates.length, sub: `${senateAnalyzed} analyzed`, accent: "var(--accent)" },
+                { label: "Governor",    value: govCandidates.length,    sub: `${govAnalyzed} analyzed`,    accent: "var(--accent)" },
+                { label: "House",       value: houseCandidates.length,  sub: `${houseAnalyzed} analyzed`,  accent: "var(--accent)" },
+                { label: "Avg Climate", value: avgScore != null ? `${avgScore}/100` : "—", sub: `${analyzedCount} analyzed`, accent: "var(--accent)" },
+                { label: "Avg AI",      value: avgAIScore != null ? `${avgAIScore}/100` : "—", sub: `${aiAnalyzedCount} analyzed`, accent: "#4a90d9" },
+              ].map(({ label, value, sub, accent }) => (
+                <div key={label} style={{ textAlign: "right" }}>
+                  <div style={{ color: accent, fontFamily: "'DM Mono', monospace", fontSize: 18, fontWeight: 500, lineHeight: 1 }}>{value}</div>
+                  <div style={{ color: "var(--text-deep)", fontSize: 10, letterSpacing: 0.5, marginTop: 2 }}>{label}</div>
+                  <div style={{ color: "var(--text-ghost)", fontSize: 10 }}>{sub}</div>
+                </div>
+              ))}
+              {isAdmin && (
+                <button onClick={runSync} disabled={syncing} style={{
+                  background: "var(--toggle-bg)", border: "1px solid var(--toggle-border)",
+                  color: syncing ? "var(--text-dim)" : "var(--accent)", borderRadius: 8,
+                  padding: "6px 12px", cursor: syncing ? "not-allowed" : "pointer",
+                  fontSize: 12, fontFamily: "'DM Mono', monospace",
+                }}>
+                  {syncing ? "⟳" : "↻ Sync"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Search + action bar ── */}
+        <div style={{ padding: "10px 24px", borderBottom: "1px solid var(--border-mid)", background: "var(--bg-page)" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {/* Mobile: open sidebar button */}
+            <button className="sidebar-open-btn" onClick={() => setSidebarOpen(true)} style={{
+              background: activeFilterCount > 0 ? "#071525" : "var(--bg-elevated)",
+              color: activeFilterCount > 0 ? "#4a90d9" : "var(--text-muted)",
+              border: `1px solid ${activeFilterCount > 0 ? "#2980b944" : "var(--border-strong)"}`,
+              borderRadius: 6, padding: "7px 12px", cursor: "pointer",
+              fontSize: 12, fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap", flexShrink: 0,
+            }}>
+              ⚙ Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+            </button>
+
             <input
               type="text"
               placeholder="Search by name..."
               value={filter.search}
               onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
-              className="filter-search"
-              style={{ background: "var(--bg-card)", color: "var(--text-3)", border: "1px solid var(--border-subtle)", padding: "8px 12px", borderRadius: 6, fontSize: 13, fontFamily: "'DM Mono', monospace", outline: "none" }}
+              style={{
+                flex: 1, background: "var(--bg-card)", color: "var(--text-3)",
+                border: "1px solid var(--border-subtle)", padding: "8px 12px",
+                borderRadius: 6, fontSize: 13, fontFamily: "'DM Mono', monospace", outline: "none",
+              }}
             />
-            {/* Analyze All Climate — unchanged */}
-            <button className="filter-analyze" onClick={analyzeAll} disabled={analyzingAll || analyzing !== null}
-              style={{
-                background: "var(--bg-btn-analyze)", color: analyzingAll ? "var(--btn-analyze-dis)" : "var(--btn-analyze-color)", border: "1px solid var(--accent-btn-border)",
-                padding: "8px 16px", borderRadius: 6, cursor: (analyzingAll || analyzing) ? "not-allowed" : "pointer",
-                fontSize: 12, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, whiteSpace: "nowrap",
-              }}>
-              {analyzingAll ? `⟳ Analyzing...` : `✦ Analyze Climate (${filtered.filter(c => c.climateScore === null).length})`}
+            <button onClick={analyzeAll} disabled={analyzingAll || analyzing !== null} style={{
+              background: "var(--bg-btn-analyze)",
+              color: analyzingAll ? "var(--btn-analyze-dis)" : "var(--btn-analyze-color)",
+              border: "1px solid var(--accent-btn-border)", padding: "8px 14px", borderRadius: 6,
+              cursor: (analyzingAll || analyzing) ? "not-allowed" : "pointer",
+              fontSize: 12, fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap",
+            }}>
+              {analyzingAll ? "⟳ Analyzing..." : `✦ Analyze Climate (${filtered.filter(c => c.climateScore === null).length})`}
             </button>
-            {/* Analyze All AI Policy — Step 10 */}
-            <button onClick={analyzeAllAI} disabled={analyzingAllAI || analyzingAI !== null}
-              style={{
-                background: "#071525", color: (analyzingAllAI || analyzingAI) ? "#5ba3d9" : "#4a90d9", border: "1px solid #2980b944",
-                padding: "8px 16px", borderRadius: 6, cursor: (analyzingAllAI || analyzingAI) ? "not-allowed" : "pointer",
-                fontSize: 12, fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, whiteSpace: "nowrap",
-              }}>
-              {analyzingAllAI ? `⟳ Analyzing AI...` : `⚡ Analyze AI Policy (${filtered.filter(c => c.aiPolicyScore === null).length})`}
+            <button onClick={analyzeAllAI} disabled={analyzingAllAI || analyzingAI !== null} style={{
+              background: "#071525", color: (analyzingAllAI || analyzingAI) ? "#5ba3d9" : "#4a90d9",
+              border: "1px solid #2980b944", padding: "8px 14px", borderRadius: 6,
+              cursor: (analyzingAllAI || analyzingAI) ? "not-allowed" : "pointer",
+              fontSize: 12, fontFamily: "'DM Mono', monospace", whiteSpace: "nowrap",
+            }}>
+              {analyzingAllAI ? "⟳ Analyzing AI..." : `⚡ Analyze AI Policy (${filtered.filter(c => c.aiPolicyScore === null).length})`}
             </button>
           </div>
+        </div>
 
-          {/* Step 9: Leaderboard toggle buttons */}
-          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-            <span style={{ color: "var(--text-dim)", fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1, alignSelf: "center" }}>LEADERBOARD:</span>
-            {[
-              { mode: "climate", label: "🌿 Top Climate" },
-              { mode: "ai",      label: "⚡ Top AI Policy" },
-              { mode: "overall", label: "⭐ Top Overall" },
-            ].map(({ mode, label }) => (
-              <button key={mode}
-                onClick={() => setLeaderboardMode(m => m === mode ? null : mode)}
-                style={{
-                  background: leaderboardMode === mode ? "var(--bg-btn-analyze)" : "var(--bg-card)",
+        {/* ── Content area ── */}
+        <div style={{ padding: "16px 24px" }}>
+
+          {/* Leaderboard (collapsible) */}
+          <div style={{ marginBottom: 12, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ padding: "10px 14px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ color: "var(--text-dim)", fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: 1.5 }}>LEADERBOARD</span>
+              {[
+                { mode: "climate", label: "🌿 Top Climate" },
+                { mode: "ai",      label: "⚡ Top AI Policy" },
+                { mode: "overall", label: "⭐ Top Overall" },
+              ].map(({ mode, label }) => (
+                <button key={mode} onClick={() => handleLeaderboard(mode)} style={{
+                  background: leaderboardMode === mode ? "var(--bg-btn-analyze)" : "var(--bg-elevated)",
                   color: leaderboardMode === mode ? "var(--btn-analyze-color)" : "var(--text-muted)",
-                  border: `1px solid ${leaderboardMode === mode ? "var(--accent-btn-border)" : "var(--border-subtle)"}`,
-                  padding: "5px 12px", borderRadius: 6, cursor: "pointer",
-                  fontSize: 12, fontFamily: "'DM Mono', monospace", transition: "all 0.15s",
+                  border: `1px solid ${leaderboardMode === mode ? "var(--accent-btn-border)" : "var(--border-strong)"}`,
+                  padding: "4px 10px", borderRadius: 6, cursor: "pointer",
+                  fontSize: 11, fontFamily: "'DM Mono', monospace", transition: "all 0.15s",
                 }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {leaderboardExpanded && leaderboardMode && (
+              <div style={{ borderTop: "1px solid var(--border-mid)", padding: "0 14px 14px" }}>
+                <Leaderboard candidates={candidates} mode={leaderboardMode} onClose={() => { setLeaderboardMode(null); setLeaderboardExpanded(false); }} />
+              </div>
+            )}
+          </div>
+
+          {/* Results count + active filter tags */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: "var(--text-deep)", fontSize: 11, fontFamily: "'DM Mono', monospace", marginBottom: activeTags.length > 0 ? 6 : 0 }}>
+              SHOWING {filtered.length} OF {candidates.length} CANDIDATES
+            </div>
+            {activeTags.length > 0 && (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <span style={{ color: "var(--text-dim)", fontSize: 11, fontFamily: "'DM Mono', monospace", alignSelf: "center" }}>Active filters:</span>
+                {activeTags.map(tag => (
+                  <button key={tag.label} onClick={tag.clear} style={{
+                    background: "var(--bg-elevated)", color: "var(--text-3)",
+                    border: "1px solid var(--border-strong)", borderRadius: 20,
+                    padding: "2px 10px", cursor: "pointer",
+                    fontSize: 11, fontFamily: "'DM Mono', monospace",
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                  }}>
+                    {tag.label} <span style={{ color: "var(--text-dim)", fontSize: 10 }}>✕</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* House banner */}
+          {filter.officeType === "us_house" && (
+            <div style={{
+              background: "#0a1a2e", border: "1px solid #4a90d944", borderRadius: 8,
+              padding: "10px 14px", marginBottom: 12,
+              color: "#4a90d9", fontSize: 12, fontFamily: "'DM Mono', monospace",
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span>ℹ</span>
+              <span>Battleground districts (⚡) have full AI analysis priority. Safe-seat candidates receive an algorithmic score.</span>
+            </div>
+          )}
+
+          {/* Score legend */}
+          <div style={{ display: "flex", gap: 14, marginBottom: 14, flexWrap: "wrap" }}>
+            <span style={{ color: "var(--text-deep)", fontSize: 11, fontFamily: "'DM Mono', monospace", alignSelf: "center" }}>SCORE:</span>
+            {[["≥70 Strong", "#27ae60"], ["40–69 Mixed", "#e67e22"], ["<40 Weak", "#c0392b"], ["Not Analyzed", "var(--text-deep)"]].map(([label, color]) => (
+              <span key={label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-muted)" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }} />
                 {label}
-              </button>
+              </span>
             ))}
           </div>
 
+          {/* Global error */}
           {globalError && (
-            <div style={{ marginTop: 12, background: "var(--bg-error)", border: "1px solid var(--border-error)", borderRadius: 6, padding: "10px 14px", color: "var(--error-color)", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
+            <div style={{ marginBottom: 12, background: "var(--bg-error)", border: "1px solid var(--border-error)", borderRadius: 6, padding: "10px 14px", color: "var(--error-color)", fontSize: 13, fontFamily: "'DM Mono', monospace" }}>
               {globalError}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* ── Main content ── */}
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 32px" }}>
-        {/* Step 9: Leaderboard panel */}
-        {leaderboardMode && (
-          <Leaderboard
-            candidates={candidates}
-            mode={leaderboardMode}
-            onClose={() => setLeaderboardMode(null)}
-          />
-        )}
-
-        {filter.officeType === "us_house" && (
-          <div style={{
-            background: "#0a1a2e", border: "1px solid #4a90d944", borderRadius: 8,
-            padding: "12px 16px", marginBottom: 16,
-            color: "#4a90d9", fontSize: 13, fontFamily: "'DM Mono', monospace",
-            display: "flex", alignItems: "center", gap: 10,
-          }}>
-            <span style={{ fontSize: 16 }}>ℹ</span>
-            <span>
-              Showing House candidates. Battleground districts (marked with ⚡) have full AI analysis priority.
-              Safe-seat candidates receive an algorithmic score based on party affiliation and donation data.
-            </span>
+          {/* Candidate cards */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {filtered.map(c => (
+              <CandidateCard key={c.id} candidate={c}
+                onAnalyze={analyzeCandidate} analyzing={analyzing}
+                onAnalyzeAI={analyzeAI} analyzingAI={analyzingAI}
+                onCompare={setCompareCandidate} onMap={setMapCandidate}
+              />
+            ))}
           </div>
-        )}
 
-        {/* Score legend */}
-        <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
-          <span style={{ color: "var(--text-deep)", fontSize: 12, fontFamily: "'DM Mono', monospace", alignSelf: "center" }}>SCORE:</span>
-          {[["≥70 Strong", "#27ae60"], ["40–69 Mixed", "#e67e22"], ["<40 Weak", "#c0392b"], ["Not Analyzed", "var(--text-deep)"]].map(([label, color]) => (
-            <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block" }} />
-              {label}
-            </span>
-          ))}
-        </div>
+          {filtered.length === 0 && (
+            <div style={{ textAlign: "center", padding: 60, color: "var(--text-ghost)", fontFamily: "'DM Mono', monospace" }}>
+              No candidates match your filters.
+            </div>
+          )}
 
-        <div style={{ color: "var(--text-deep)", fontSize: 12, fontFamily: "'DM Mono', monospace", marginBottom: 16 }}>
-          SHOWING {filtered.length} OF {candidates.length} CANDIDATES
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {filtered.map(c => (
-            <CandidateCard key={c.id} candidate={c}
-              onAnalyze={analyzeCandidate} analyzing={analyzing}
-              onAnalyzeAI={analyzeAI} analyzingAI={analyzingAI}
-              onCompare={setCompareCandidate} onMap={setMapCandidate}
-            />
-          ))}
-        </div>
-
-        {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: 60, color: "var(--text-ghost)", fontFamily: "'DM Mono', monospace" }}>
-            No candidates match your filters.
+          {/* Footer */}
+          <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid var(--border-mid)", color: "var(--text-ghost)", fontSize: 11, fontFamily: "'DM Mono', monospace", lineHeight: 1.8 }}>
+            <div style={{ marginBottom: 4, color: "var(--text-deep)" }}>DATA SOURCES & METHODOLOGY</div>
+            Candidate data from Wikipedia, Ballotpedia, and news reporting (as of 2026). AI analysis powered by Claude (Anthropic). Climate scores reflect climate science alignment — not party affiliation. AI Policy scores cover AI governance, data center regulation, and algorithmic accountability. Race ratings from Cook Political Report / Sabato&apos;s Crystal Ball. Big Tech PAC data sourced from FEC. For informational purposes only.
           </div>
-        )}
-
-        <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid var(--border-mid)", color: "var(--text-ghost)", fontSize: 12, fontFamily: "'DM Mono', monospace", lineHeight: 1.8 }}>
-          <div style={{ marginBottom: 6, color: "var(--text-deep)" }}>DATA SOURCES & METHODOLOGY</div>
-          Candidate data sourced from Wikipedia, Ballotpedia, and news reporting (as of March 2026). AI analysis powered by Claude (Anthropic). Climate scores reflect climate policy alignment with scientific consensus — not party affiliation. AI Policy scores reflect positions on AI governance, data center regulation, algorithmic accountability, and Big Tech oversight. Race competitiveness ratings from Cook Political Report / Sabato&apos;s Crystal Ball. Fossil fuel donation levels are indicative estimates. Big Tech PAC data sourced from FEC. This tracker is for informational purposes; always verify with primary sources.
         </div>
-      </div>
-
-      {compareCandidate && (
-        <CompareModal
-          primary={compareCandidate}
-          opponents={getOpponents(compareCandidate)}
-          onClose={() => setCompareCandidate(null)}
-          cache={compareCache}
-          onCacheUpdate={(key, data) => setCompareCache(prev => ({ ...prev, [key]: data }))}
-          allCandidates={candidates}
-        />
-      )}
+      </main>
     </div>
   );
 }

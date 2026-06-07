@@ -111,58 +111,85 @@ select option { background: #111; }
 
 input::placeholder { color: var(--text-dim); }
 
-/* Filter toolbar */
-.filter-row {
+/* ── Two-column layout ───────────────────────────── */
+
+.layout-wrapper {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  margin-top: 20px;
+  min-height: 100vh;
+  background: var(--bg-page);
 }
 
-.filter-row select {
-  flex: 1 1 auto;
-  min-width: 150px;
-  color: var(--text-3);
-}
+/* ── Sidebar ─────────────────────────────────────── */
 
-.filter-row select.issues-select {
-  flex: 2 1 auto;
-  min-width: 200px;
-}
-
-.filter-actions-row {
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: #0f0f0f;
+  border-right: 1px solid #1a1a1a;
+  position: sticky;
+  top: 0;
+  height: 100vh;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
+  flex-direction: column;
+  z-index: 100;
+  overflow: hidden;
 }
 
-.filter-search {
-  flex: 0 0 40%;
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+
+.sidebar-close-btn { display: none; }
+.sidebar-open-btn  { display: none; }
+
+/* ── Main content ────────────────────────────────── */
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.filter-analyze {
-  margin-left: auto;
+/* ── Mobile sidebar overlay ──────────────────────── */
+
+.sidebar-overlay {
+  display: none;
 }
+
+/* ── Mobile (≤768px) ─────────────────────────────── */
 
 @media (max-width: 768px) {
-  .filter-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  .layout-wrapper {
+    display: block;
   }
 
-  .filter-actions-row {
-    flex-direction: column;
-    align-items: stretch;
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    height: 100%;
+    z-index: 200;
+    transition: left 0.25s ease;
   }
 
-  .filter-search {
-    flex: unset;
+  .sidebar.sidebar-open {
+    left: 0;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.7);
+  }
+
+  .sidebar-close-btn { display: block; }
+  .sidebar-open-btn  { display: block !important; }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.72);
+    z-index: 199;
+  }
+
+  .main-content {
     width: 100%;
-  }
-
-  .filter-analyze {
-    margin-left: 0;
   }
 }
