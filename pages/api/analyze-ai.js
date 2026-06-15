@@ -6,6 +6,7 @@
 import { buildAIPolicyTier1Prompt, buildAIPolicyTier2Prompt } from '../../lib/prompts/aiPolicyPrompts.js'
 import { getBigTechDonations } from '../../lib/data/bigTechDonations.js'
 import { getAIBills } from '../../lib/data/aiBillsTracker.js'
+import { getAILegislation } from '../../lib/data/openStatesLegislation.js'
 import { getDataCenterInfo } from '../../lib/data/dataCenterDistricts.js'
 import { logApiCall } from '../../lib/utils/costTracker.js'
 
@@ -100,23 +101,25 @@ export default async function handler(req, res) {
   }
 
   // --- Assemble context data ---
-  const [bigTechResult, aiBills] = await Promise.all([
+  const [bigTechResult, aiBills, stateAILegislation] = await Promise.all([
     getBigTechDonations(candidateId, candidate.name, candidate.state),
     getAIBills(candidate.name, candidate.state),
+    getAILegislation(candidate.name, candidate.state, candidateId),
   ])
 
   const datacenterInfo = getDataCenterInfo(candidate.state, candidate.district ?? null)
 
   // --- Build prompt ---
   const promptParams = {
-    name:             candidate.name,
-    party:            candidate.party,
-    state:            candidate.state,
-    office:           candidate.office,
-    district:         candidate.district ?? null,
-    knownPositions:   candidate.known_positions ?? '',
-    bigTechDonations: bigTechResult.level,
+    name:               candidate.name,
+    party:              candidate.party,
+    state:              candidate.state,
+    office:             candidate.office,
+    district:           candidate.district ?? null,
+    knownPositions:     candidate.known_positions ?? '',
+    bigTechDonations:   bigTechResult.level,
     aiBills,
+    stateAILegislation,
     datacenterInfo,
   }
 
@@ -190,7 +193,7 @@ export default async function handler(req, res) {
           ai_policy_score:    score,
           ai_analysis:        analysis,
           scores_by_dimension: dimensions,
-          data_sources:       { bigTech: bigTechResult, aiBills, datacenterInfo },
+          data_sources:       { bigTech: bigTechResult, aiBills, stateAILegislation, datacenterInfo },
           model_version:      model,
           updated_at:         now,
         }, { onConflict: 'candidate_id' })
@@ -212,7 +215,7 @@ export default async function handler(req, res) {
       }).eq('id', candidateId)
     }
 
-    return res.status(200).json({ score, analysis, dimensions, stances, bigTechLevel: bigTechResult.level, aiBills, cached: false })
+    return res.status(200).json({ score, analysis, dimensions, stances, bigTechLevel: bigTechResult.level, aiBills, stateAILegislation, cached: false })
   } catch (err) {
     console.error('[analyze-ai] Error:', err)
     return res.status(500).json({ error: err.message ?? 'Analysis failed' })

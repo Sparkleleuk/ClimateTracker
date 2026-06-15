@@ -3,6 +3,7 @@ import { TIERS } from '../../lib/constants/tiers.js'
 import { buildHouseTier1Prompt, buildHouseTier2Prompt } from '../../lib/prompts/housePrompts.js'
 import { computeAlgorithmicScore } from '../../lib/scoring/algorithmicScore.js'
 import { logApiCall } from '../../lib/utils/costTracker.js'
+import { getClimateLegislation } from '../../lib/data/openStatesLegislation.js'
 
 const client = new Anthropic()
 
@@ -45,7 +46,12 @@ const ISSUE_TAGS = [
 
 const ISSUE_TAG_LIST = ISSUE_TAGS.map(t => `${t.value} — ${t.label}`).join('\n')
 
-function buildPrompt(candidate) {
+function formatStateBills(bills) {
+  if (!bills?.length) return 'None found'
+  return bills.map(b => `${b.bill_number} (${b.session}): ${b.title} — ${b.status}`).join('\n  ')
+}
+
+function buildPrompt(candidate, stateClimateBills = []) {
   return `You are a nonpartisan climate policy analyst. Analyze this US congressional candidate's environmental record and positions.
 
 Candidate: ${candidate.name}
@@ -55,6 +61,7 @@ Office: ${candidate.office}
 Race Competitiveness: ${candidate.raceCompetitiveness}
 Known Positions: ${candidate.knownPositions}
 Fossil Fuel Donation Level: ${candidate.fossilFuelDonations}
+State legislature climate bills sponsored: ${formatStateBills(stateClimateBills)}
 
 Provide:
 1. CLIMATE SCORE (0-100): Score their climate record/proposals. 0=climate denier/fossil fuel champion, 50=mixed/moderate, 100=ambitious climate leader. State the number clearly as "SCORE: XX/100"
@@ -76,7 +83,7 @@ ${ISSUE_TAG_LIST}
 Be factual, cite their state's specific climate vulnerabilities, and note data gaps where the record is thin. Be nonpartisan — score based on climate science alignment, not party affiliation.`
 }
 
-function buildGovernorPrompt(candidate) {
+function buildGovernorPrompt(candidate, stateClimateBills = []) {
   return `You are a nonpartisan climate policy analyst. Analyze this US gubernatorial candidate's environmental record and state-level climate positions.
 
 Candidate: ${candidate.name}
@@ -86,6 +93,7 @@ Office: Governor of ${candidate.state}
 Race Competitiveness: ${candidate.raceCompetitiveness}
 Known Positions: ${candidate.knownPositions}
 Fossil Fuel Donation Level: ${candidate.fossilFuelDonations}
+State legislature climate bills sponsored: ${formatStateBills(stateClimateBills)}
 
 Governors have distinct state-level climate powers. Focus your analysis on:
 - State renewable energy standards and utility regulation authority
@@ -223,14 +231,21 @@ export default async function handler(req, res) {
 
   // --- Tier 1 / Senate / Governor / forceFullAnalysis: full prompt ---
   try {
+    // Fetch state legislature climate bills (degrades gracefully to [])
+    const stateClimateBills = await getClimateLegislation(
+      candidate.name,
+      candidate.state,
+      candidate.id ?? null,
+    )
+
     let prompt
     if (isHouse) {
       // Tier 1 House or forceFullAnalysis upgrade
       prompt = buildHouseTier1Prompt(candidate)
     } else if (candidate.officeType === 'governor') {
-      prompt = buildGovernorPrompt(candidate)
+      prompt = buildGovernorPrompt(candidate, stateClimateBills)
     } else {
-      prompt = buildPrompt(candidate)
+      prompt = buildPrompt(candidate, stateClimateBills)
     }
 
     const stream = client.messages.stream({
