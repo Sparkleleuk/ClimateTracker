@@ -111,6 +111,23 @@ select option { background: #111; }
 
 input::placeholder { color: var(--text-dim); }
 
+/* ── Methodology link (header) ───────────────────── */
+
+@media (max-width: 768px) {
+  .methodology-text { display: none; }
+  .methodology-icon { display: inline !important; }
+}
+
+/* ── Methodology page ───────────────────────────── */
+
+@media (max-width: 768px) {
+  .method-toc-desktop { display: none !important; }
+  .method-toc-mobile  { display: block !important; }
+}
+@media (min-width: 769px) {
+  .method-toc-mobile  { display: none !important; }
+}
+
 /* ── Two-column layout ───────────────────────────── */
 
 .layout-wrapper {

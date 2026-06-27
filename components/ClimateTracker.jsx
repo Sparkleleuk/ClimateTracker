@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { analyzeCandidate as fetchAnalysis } from "../services/climateApi";
 import { compareCandiates } from "../services/compareApi";
@@ -398,42 +399,190 @@ function StatusBadge({ candidate }) {
   return null;
 }
 
+// ─── Tooltip ─────────────────────────────────────────────────────────────────
+
+function Tooltip({ children, content }) {
+  const [visible, setVisible] = useState(false);
+  const tipRef = useRef(null);
+
+  const adjustEdge = useCallback(() => {
+    if (!tipRef.current) return;
+    const rect = tipRef.current.getBoundingClientRect();
+    const w = window.innerWidth;
+    if (rect.left < 8) {
+      tipRef.current.style.left = "0";
+      tipRef.current.style.transform = "none";
+    } else if (rect.right > w - 8) {
+      tipRef.current.style.left = "auto";
+      tipRef.current.style.right = "0";
+      tipRef.current.style.transform = "none";
+    }
+  }, []);
+
+  const show = () => { setVisible(true); setTimeout(adjustEdge, 0); };
+  const hide = () => setVisible(false);
+
+  return (
+    <span style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
+      onMouseEnter={show} onMouseLeave={hide}
+      onClick={e => { e.stopPropagation(); setVisible(v => !v); setTimeout(adjustEdge, 0); }}
+    >
+      {children}
+      {visible && (
+        <div ref={tipRef} style={{
+          position: "absolute", bottom: "calc(100% + 8px)", left: "50%",
+          transform: "translateX(-50%)", zIndex: 500,
+          background: "#1a1a1a", border: "1px solid #333", borderRadius: 8,
+          padding: "12px 14px", maxWidth: 280, minWidth: 180,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.8)", pointerEvents: "none",
+        }}>
+          {content}
+          {/* Arrow */}
+          <div style={{
+            position: "absolute", bottom: -5, left: "50%", marginLeft: -4,
+            width: 8, height: 8, background: "#1a1a1a",
+            borderRight: "1px solid #333", borderBottom: "1px solid #333",
+            transform: "rotate(45deg)",
+          }} />
+        </div>
+      )}
+    </span>
+  );
+}
+
+// Tooltip content builders
+const DIM_LABEL_MAP = {
+  datacenters_energy: "Data Center Energy", water_usage: "Water Usage",
+  grid_impact: "Grid Impact", ai_safety: "AI Safety",
+  algorithmic_accountability: "Algorithmic Account.", ai_elections: "AI in Elections",
+  ai_economic: "AI Economic",
+};
+
+function ClimateTooltipContent({ score, candidate }) {
+  if (score === null) {
+    return (
+      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#888", lineHeight: 1.6 }}>
+        <div style={{ marginBottom: 6 }}>Analysis not yet run for this candidate.</div>
+        <div style={{ marginBottom: 6 }}>Click <strong style={{ color: "#27ae60" }}>Run Climate Analysis</strong> to generate a score.</div>
+        <a href="/methodology#climate-scoring" style={{ color: "#27ae60", fontSize: 10 }}>Full methodology →</a>
+      </div>
+    );
+  }
+  const label = score >= 85 ? "Ambitious climate leader" : score >= 70 ? "Strong climate record" : score >= 60 ? "Mainstream climate record" : score >= 40 ? "Mixed climate record" : score >= 21 ? "Opposes most climate policy" : "Climate denier / fossil fuel champion";
+  const confidence = candidate?.tier === 3 ? "Low (algorithmic)" : candidate?.tier === 2 ? "Medium" : "High";
+  return (
+    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, lineHeight: 1.6 }}>
+      <div style={{ color: "#27ae60", fontWeight: 700, marginBottom: 4 }}>🌿 CLIMATE SCORE</div>
+      <div style={{ color: "#444", marginBottom: 8, borderBottom: "1px solid #333", paddingBottom: 8 }}>────────────────</div>
+      <div style={{ color: "#fff", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{score}/100 <span style={{ color: "#888", fontSize: 11, fontWeight: 400 }}>— {label}</span></div>
+      {candidate?.issues?.length > 0 && (
+        <div style={{ color: "#666", marginBottom: 4 }}>
+          Key issues: {candidate.issues.slice(0, 2).join(", ")}
+        </div>
+      )}
+      <div style={{ color: "#555", marginTop: 8, marginBottom: 4 }}>Based on voting record, bill sponsorships, and public positions.</div>
+      <div style={{ color: "#555", marginBottom: 8 }}>Confidence: <span style={{ color: "#888" }}>{confidence}</span></div>
+      <a href="/methodology#climate-scoring" style={{ color: "#27ae60", fontSize: 10, textDecoration: "none" }}>Full methodology →</a>
+    </div>
+  );
+}
+
+function AITooltipContent({ score, candidate }) {
+  if (score === null) {
+    return (
+      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#888", lineHeight: 1.6 }}>
+        <div style={{ marginBottom: 6 }}>Analysis not yet run for this candidate.</div>
+        <div style={{ marginBottom: 6 }}>Click <strong style={{ color: "#4a90d9" }}>Run AI Policy Analysis</strong> to generate a score.</div>
+        <a href="/methodology#ai-policy-scoring" style={{ color: "#4a90d9", fontSize: 10 }}>Full methodology →</a>
+      </div>
+    );
+  }
+  const label = score >= 85 ? "Comprehensive AI oversight champion" : score >= 70 ? "Strong AI governance record" : score >= 60 ? "Supports targeted AI regulation" : score >= 40 ? "Mixed AI policy record" : score >= 21 ? "Opposes most AI oversight" : "Actively opposes AI regulation";
+  const dims = candidate?.aiDimensions ? Object.entries(candidate.aiDimensions).sort(([, a], [, b]) => b - a) : null;
+  const topDim = dims?.[0];
+  const botDim = dims?.[dims.length - 1];
+  const confidence = dims ? "High" : score ? "Medium" : "Low";
+  const isAlgorithmic = candidate?.tier === 3 && !candidate?.aiAnalysis;
+  if (isAlgorithmic) {
+    return (
+      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#888", lineHeight: 1.6 }}>
+        <div style={{ color: "#e67e22", fontWeight: 700, marginBottom: 6 }}>⚠️ ALGORITHMIC SCORE</div>
+        <div style={{ marginBottom: 6 }}>Calculated from voting record and donation data without AI analysis. Confidence is low.</div>
+        <div style={{ marginBottom: 8 }}>Click <strong style={{ color: "#4a90d9" }}>Upgrade to Full Analysis</strong> for a complete AI-generated assessment.</div>
+        <a href="/methodology#house-tiers" style={{ color: "#4a90d9", fontSize: 10, textDecoration: "none" }}>Full methodology →</a>
+      </div>
+    );
+  }
+  return (
+    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, lineHeight: 1.6 }}>
+      <div style={{ color: "#4a90d9", fontWeight: 700, marginBottom: 4 }}>⚡ AI POLICY SCORE</div>
+      <div style={{ color: "#444", marginBottom: 8, borderBottom: "1px solid #333", paddingBottom: 8 }}>──────────────────</div>
+      <div style={{ color: "#fff", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{score}/100 <span style={{ color: "#888", fontSize: 11, fontWeight: 400 }}>— {label}</span></div>
+      {topDim && botDim && topDim[0] !== botDim[0] && (
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ color: "#666" }}>Top: <span style={{ color: "#aaa" }}>{DIM_LABEL_MAP[topDim[0]] ?? topDim[0]} ({topDim[1]})</span></div>
+          <div style={{ color: "#666" }}>Lowest: <span style={{ color: "#aaa" }}>{DIM_LABEL_MAP[botDim[0]] ?? botDim[0]} ({botDim[1]})</span></div>
+        </div>
+      )}
+      {candidate?.bigTechDonationLevel && candidate.bigTechDonationLevel !== "unknown" && (
+        <div style={{ color: "#666", marginBottom: 2 }}>
+          Big Tech PAC: <span style={{ color: candidate.bigTechDonationLevel === "high" || candidate.bigTechDonationLevel === "moderate" ? "#e67e22" : "#aaa" }}>
+            {candidate.bigTechDonationLevel}{(candidate.bigTechDonationLevel === "high" || candidate.bigTechDonationLevel === "moderate") ? " ⚠️" : ""}
+          </span>
+        </div>
+      )}
+      {candidate?.aiBills?.length > 0 && (
+        <div style={{ color: "#666", marginBottom: 2 }}>AI bills: <span style={{ color: "#aaa" }}>{candidate.aiBills.slice(0, 2).join(", ")}</span></div>
+      )}
+      <div style={{ color: "#555", marginTop: 8, marginBottom: 4 }}>Based on legislative record and public positions.</div>
+      <div style={{ color: "#555", marginBottom: 8 }}>Confidence: <span style={{ color: "#888" }}>{confidence}</span></div>
+      <a href="/methodology#ai-policy-scoring" style={{ color: "#4a90d9", fontSize: 10, textDecoration: "none" }}>Full methodology →</a>
+    </div>
+  );
+}
+
 // ─── Score badges ─────────────────────────────────────────────────────────────
 
-function ScoreBadge({ score }) {
-  if (score === null) return (
+function ScoreBadge({ score, candidate }) {
+  const badge = score === null ? (
     <span style={{ background: "var(--bg-badge-na)", color: "var(--badge-na-color)",
       padding: "3px 8px", borderRadius: 20, fontSize: 11, fontFamily: "monospace",
       display: "inline-flex", alignItems: "center", gap: 4 }}>
       🌿 <span>NOT ANALYZED</span>
     </span>
-  );
-  const color = score >= 70 ? "#27ae60" : score >= 40 ? "#e67e22" : "#c0392b";
-  return (
-    <span style={{ background: color, color: "#fff", padding: "3px 10px", borderRadius: 20,
-      fontSize: 12, fontWeight: 700, fontFamily: "monospace",
-      display: "inline-flex", alignItems: "center", gap: 4 }}>
-      🌿 <span>{score}/100</span>
-    </span>
-  );
+  ) : (() => {
+    const color = score >= 70 ? "#27ae60" : score >= 40 ? "#e67e22" : "#c0392b";
+    return (
+      <span style={{ background: color, color: "#fff", padding: "3px 10px", borderRadius: 20,
+        fontSize: 12, fontWeight: 700, fontFamily: "monospace",
+        display: "inline-flex", alignItems: "center", gap: 4 }}>
+        🌿 <span>{score}/100</span>
+      </span>
+    );
+  })();
+  if (!candidate) return badge;
+  return <Tooltip content={<ClimateTooltipContent score={score} candidate={candidate} />}>{badge}</Tooltip>;
 }
 
-function AIPolicyScoreBadge({ score }) {
-  if (score === null) return (
+function AIPolicyScoreBadge({ score, candidate }) {
+  const badge = score === null ? (
     <span style={{ background: "#0a1525", color: "#5b8fc9", border: "1px solid #2980b922",
       padding: "3px 8px", borderRadius: 20, fontSize: 11, fontFamily: "monospace",
       display: "inline-flex", alignItems: "center", gap: 4 }}>
       ⚡ <span>NOT ANALYZED</span>
     </span>
-  );
-  const color = score >= 70 ? "#2980b9" : score >= 40 ? "#e67e22" : "#c0392b";
-  return (
-    <span style={{ background: color, color: "#fff", padding: "3px 10px", borderRadius: 20,
-      fontSize: 12, fontWeight: 700, fontFamily: "monospace",
-      display: "inline-flex", alignItems: "center", gap: 4 }}>
-      ⚡ <span>{score}/100</span>
-    </span>
-  );
+  ) : (() => {
+    const color = score >= 70 ? "#2980b9" : score >= 40 ? "#e67e22" : "#c0392b";
+    return (
+      <span style={{ background: color, color: "#fff", padding: "3px 10px", borderRadius: 20,
+        fontSize: 12, fontWeight: 700, fontFamily: "monospace",
+        display: "inline-flex", alignItems: "center", gap: 4 }}>
+        ⚡ <span>{score}/100</span>
+      </span>
+    );
+  })();
+  if (!candidate) return badge;
+  return <Tooltip content={<AITooltipContent score={score} candidate={candidate} />}>{badge}</Tooltip>;
 }
 
 // ─── DimensionBars ────────────────────────────────────────────────────────────
@@ -599,10 +748,10 @@ function CandidateCard({ candidate, onAnalyze, analyzing, onCompare, onMap, onAn
             }}>
               {candidate.raceCompetitiveness}
             </span>
-            {/* Step 1: dual score badges */}
+            {/* Step 1: dual score badges with tooltips */}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <ScoreBadge score={candidate.climateScore} />
-              <AIPolicyScoreBadge score={candidate.aiPolicyScore} />
+              <ScoreBadge score={candidate.climateScore} candidate={candidate} />
+              <AIPolicyScoreBadge score={candidate.aiPolicyScore} candidate={candidate} />
             </div>
             <span style={{ color: "var(--text-dim)", fontSize: 16 }}>{expanded ? "▲" : "▼"}</span>
           </div>
@@ -1686,6 +1835,15 @@ export default function ClimateTracker({ initialCandidates }) {
                   <div style={{ color: "var(--text-ghost)", fontSize: 10 }}>{sub}</div>
                 </div>
               ))}
+              <Link href="/methodology"
+                className="methodology-link"
+                style={{ color: "#555", fontFamily: "'DM Mono', monospace", fontSize: 11, textDecoration: "none", letterSpacing: 0.5, transition: "color 0.15s" }}
+                onMouseEnter={e => e.target.style.color = "#aaa"}
+                onMouseLeave={e => e.target.style.color = "#555"}
+              >
+                <span className="methodology-text">Methodology</span>
+                <span className="methodology-icon" style={{ display: "none" }}>ℹ️</span>
+              </Link>
               {isAdmin && (
                 <button onClick={runSync} disabled={syncing} style={{
                   background: "var(--toggle-bg)", border: "1px solid var(--toggle-border)",
@@ -2271,8 +2429,24 @@ export default function ClimateTracker({ initialCandidates }) {
 
           {/* Footer */}
           <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid var(--border-mid)", color: "var(--text-ghost)", fontSize: 11, fontFamily: "'DM Mono', monospace", lineHeight: 1.8 }}>
-            <div style={{ marginBottom: 4, color: "var(--text-deep)" }}>DATA SOURCES & METHODOLOGY</div>
-            Candidate data from Wikipedia, Ballotpedia, and news reporting (as of 2026). AI analysis powered by Claude (Anthropic). Climate scores reflect climate science alignment — not party affiliation. AI Policy scores cover AI governance, data center regulation, and algorithmic accountability. Race ratings from Cook Political Report / Sabato&apos;s Crystal Ball. Big Tech PAC data sourced from FEC. For informational purposes only.
+            <div style={{ marginBottom: 8, color: "var(--text-deep)" }}>DATA SOURCES & METHODOLOGY</div>
+            <div style={{ marginBottom: 12 }}>
+              Candidate data from Wikipedia, Ballotpedia, and news reporting (as of 2026). AI analysis powered by Claude (Anthropic). Climate scores reflect climate science alignment — not party affiliation. AI Policy scores cover AI governance, data center regulation, and algorithmic accountability. Race ratings from Cook Political Report / Sabato&apos;s Crystal Ball. Big Tech PAC data sourced from FEC. For informational purposes only.
+            </div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              {[
+                { label: "Methodology",           href: "/methodology" },
+                { label: "Data Sources",          href: "/methodology#data-sources" },
+                { label: "Request a Correction",  href: "/methodology#requesting-changes" },
+              ].map(({ label, href }) => (
+                <a key={href} href={href} style={{ color: "#444", textDecoration: "none", transition: "color 0.15s" }}
+                  onMouseEnter={e => e.target.style.color = "#888"}
+                  onMouseLeave={e => e.target.style.color = "#444"}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </main>
