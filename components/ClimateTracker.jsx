@@ -1813,7 +1813,7 @@ export default function ClimateTracker({ initialCandidates }) {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 22 }}>🌿</span>
               <div>
-                <h1 style={{ margin: 0, fontFamily: "'Nunito', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: -0.3, color: "var(--text-1)" }}>
+                <h1 style={{ margin: 0, fontFamily: "'Roboto', sans-serif", fontSize: 22, fontWeight: 700, letterSpacing: -0.3, color: "var(--text-1)" }}>
                   Climate Candidate Tracker
                 </h1>
                 <p style={{ margin: 0, color: "var(--text-dim)", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>
